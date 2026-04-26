@@ -185,7 +185,7 @@ function createMachineHTML(name, info) {
             const status = info.status.toLowerCase();
             const isBusy = info.finish_at && Date.parse(info.finish_at) > Date.now();
             if (isBusy) return isWasher ? 'blue-500' : 'orange-500';
-            if (status === 'complete' || (info.finish_at && !isBusy)) return 'purple-500';
+            if (status === 'complete') return 'purple-500'; // เช็คจาก status เท่านั้น ไม่ใช้ finish_at
             return 'emerald-500';
         };
 

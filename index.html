@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Laundry Pro Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Sarabun', 'sans-serif'], } } }
+        }
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <style>
+        body { transition: background-color 0.3s ease, color 0.3s ease; -webkit-tap-highlight-color: transparent; }
+        @keyframes slow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-slow-spin { animation: slow-spin 12s linear infinite; }
+        .glass-card { backdrop-filter: blur(8px); background: rgba(255, 255, 255, 0.8); }
+        .dark .glass-card { background: rgba(30, 41, 59, 0.8); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen pb-10">
+
+    <header class="sticky top-0 z-50 glass-card border-b border-slate-200 dark:border-slate-700 shadow-sm px-4 md:px-6 py-3 mb-6">
+        <div class="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <img src="Logo.png" alt="Logo" class="h-10 object-contain dark:brightness-110" onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight dark:text-white leading-tight">My Laundry</h1>
+                    <div class="flex items-center gap-2">
+                        <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="last-sync-display">อัปเดตล่าสุด: --:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-yellow-400 hover:scale-105 transition-all">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
+                </button>
+                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <button id="view-user" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400">USER</button>
+                    <button id="view-admin" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400">ADMIN</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-[1400px] mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <aside class="lg:col-span-3">
+            <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 sticky top-24">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">ภาพรวมระบบ</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end">
+                        <span class="text-sm font-bold text-slate-500">ว่างพร้อมใช้</span>
+                        <span id="stat-ready" class="text-3xl font-black text-emerald-500">0</span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-sm font-bold text-slate-500">กำลังทำงาน</span>
+                        <span id="stat-busy" class="text-3xl font-black text-blue-500">0</span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-sm font-bold text-slate-500">ซักเสร็จแล้ว</span>
+                        <span id="stat-done" class="text-3xl font-black text-purple-500">0</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="lg:col-span-9 space-y-6">
+            <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
+                    <h2 class="text-lg font-bold tracking-tight">โซนเครื่องซัก (Washer)</h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone"></div>
+            </section>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
+                        <h2 class="text-lg font-bold tracking-tight text-center">ซัก-อบ All-in-one (AQUA)</h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4" id="all-in-one-zone"></div>
+                </section>
+
+                <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
+                        <h2 class="text-lg font-bold tracking-tight">โซนเครื่องอบ (Dryer Stack)</h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4" id="dryer-zone"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+    const firebaseConfig = { databaseURL: "https://laundry-vending-system-default-rtdb.asia-southeast1.firebasedatabase.app/" };
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    
+    let currentData = null;
+    let isAdminMode = false;
+
+    // ข้อมูลความจุเครื่องตามที่ระบุ
+    const machineCapacities = {
+        'W1': '15KG', 
+        'W2': '15KG', 
+        'W3': '15KG', 
+        'W4': '10KG',
+        'AQUA9': '17KG', 
+        'AQUA10': '27KG'
+    };
+
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        updateThemeIcons();
+    });
+
+    function updateThemeIcons() {
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        if (document.documentElement.classList.contains('dark')) {
+            lightIcon.classList.remove('hidden'); darkIcon.classList.add('hidden');
+        } else {
+            darkIcon.classList.remove('hidden'); lightIcon.classList.add('hidden');
+        }
+    }
+    updateThemeIcons();
+
+    document.getElementById('view-user').onclick = () => toggleMode(false);
+    document.getElementById('view-admin').onclick = () => toggleMode(true);
+
+    function toggleMode(admin) {
+        isAdminMode = admin;
+        document.getElementById('view-user').className = !admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
+        document.getElementById('view-admin').className = admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
+        render();
+    }
+
+    window.notifyMe = (name) => alert(`🔔 แจ้งเตือนสำหรับ ${name} เรียบร้อยแล้ว!`);
+
+function createMachineHTML(name, info) {
+        const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
+        const isWasher = name.includes('W') || name.includes('เครื่องซัก');
+        const num = name.replace(/\D/g,''); // ดึงเฉพาะตัวเลขออกมา
+        
+        // Logic ใหม่: จับคู่ความจุด้วยตัวเลขลำดับเครื่อง
+        let capacityText = "";
+        if (isWasher && !isAqua) {
+            if (num === "1" || num === "2" || num === "3") capacityText = "15KG";
+            else if (num === "4") capacityText = "10KG";
+        } else if (isAqua) {
+            if (num === "9") capacityText = "17KG";
+            else if (num === "10") capacityText = "27KG";
+        }
+        
+        let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);
+        
+        const cardHeight = isAqua ? 'h-52 md:h-64' : 'h-48'; 
+        const svgSize = isAqua ? 'w-24 h-24 md:w-32 md:h-32' : 'w-16 h-16';
+        const radius = isAqua ? 42 : 28;
+        const viewBox = isAqua ? "0 0 100 100" : "0 0 80 80";
+        const center = isAqua ? 50 : 40;
+        const circ = 2 * Math.PI * radius;
+
+        const getStatusColor = (info, isWasher) => {
+            if (!info || info.status?.toLowerCase() === 'offline') return 'slate-400';
+            const status = info.status.toLowerCase();
+            const isBusy = info.finish_at && Date.parse(info.finish_at) > Date.now();
+            if (isBusy) return isWasher ? 'blue-500' : 'orange-500';
+            if (status === 'complete' || (info.finish_at && !isBusy)) return 'purple-500';
+            return 'emerald-500';
+        };
+
+        const themeColor = getStatusColor(info, isWasher);
+
+        // Template สำหรับ Card
+        return `
+            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm transition-all flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-60' : ''}">
+                <div class="bg-${themeColor} py-1.5 text-center text-[10px] font-black text-white uppercase tracking-tight">${displayName}</div>
+                <div class="flex-grow flex flex-col items-center justify-center p-3">
+                    
+                    ${capacityText ? `<div class="text-[12px] font-black text-${themeColor} mb-2 tracking-widest px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">${capacityText}</div>` : '<div class="h-[26px]"></div>'}
+                    
+                    <div class="relative ${svgSize} mb-2">
+                        <svg viewBox="${viewBox}" class="w-full h-full">
+                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-slate-100 dark:text-slate-800" stroke-width="${isAqua ? 6 : 4}" fill="transparent"/>
+                            ${(info && info.status?.toLowerCase() !== 'offline') ? `
+                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-${themeColor} transition-all duration-1000" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
+                                stroke-dasharray="${circ}" stroke-dashoffset="${(info.finish_at && Date.parse(info.finish_at) > Date.now()) ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
+                            ` : ''}
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-2xl' : 'text-[12px]'} font-black">
+                            ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFF' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? 
+                                `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
+                                (info.status.toLowerCase() === 'complete' ? 'DONE' : 'READY') )}
+                        </div>
+                    </div>
+                    <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'ไม่ได้เชื่อมต่อ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function render() {
+        if (!currentData) return;
+        const names = Object.keys(currentData).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+        
+        document.getElementById('washer-zone').innerHTML = names.filter(n => n.startsWith('W')).map(n => createMachineHTML(n, currentData[n])).join('');
+        document.getElementById('all-in-one-zone').innerHTML = ['AQUA9', 'AQUA10'].map(n => createMachineHTML(n, currentData[n] || {status:'offline'})).join('');
+        
+        // สลับตำแหน่ง D6 และ D7
+        const dryerNames = names.filter(n => n.startsWith('D'));
+        const idx6 = dryerNames.indexOf('D6');
+        const idx7 = dryerNames.indexOf('D7');
+        if (idx6 !== -1 && idx7 !== -1) {
+            [dryerNames[idx6], dryerNames[idx7]] = [dryerNames[idx7], dryerNames[idx6]];
+        }
+        document.getElementById('dryer-zone').innerHTML = dryerNames.map(n => createMachineHTML(n, currentData[n])).join('');
+
+        let stats = { ready: 0, busy: 0, done: 0 };
+        names.forEach(n => {
+            if (n.startsWith('AQUA')) return;
+            const info = currentData[n];
+            const busy = info.finish_at && Date.parse(info.finish_at) > Date.now();
+            if (busy) stats.busy++; else if (info.status.toLowerCase() === 'complete') stats.done++; else stats.ready++;
+        });
+        document.getElementById('stat-ready').innerText = stats.ready;
+        document.getElementById('stat-busy').innerText = stats.busy;
+        document.getElementById('stat-done').innerText = stats.done;
+    }
+
+    onValue(ref(database, 'laundry_system'), (snap) => {
+        const root = snap.val();
+        if (root) {
+            currentData = root.machines;
+            document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${root.last_sync.split(' ')[1]}`;
+            render();
+        }
+    });
+
+    setInterval(render, 1000);
+</script>
+</body>
+</html>

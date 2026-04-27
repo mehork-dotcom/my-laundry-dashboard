@@ -33,7 +33,7 @@
             <div class="flex items-center gap-3">
                 <img src="Logo.png" alt="Logo" class="h-10 object-contain dark:brightness-110" onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight dark:text-white leading-tight">My Laundry</h1>
+                    <h1 class="text-xl font-extrabold tracking-tight dark:text-white leading-tight">My Laundry (Wash & Dry)</h1>
                     <div class="flex items-center gap-2">
                         <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest" id="last-sync-display">อัปเดตล่าสุด: --:--</span>
@@ -80,7 +80,7 @@
             <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                 <div class="flex items-center gap-2 mb-6">
                     <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
-                    <h2 class="text-lg font-bold tracking-tight">โซนเครื่องซัก (Washer)</h2>
+                    <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone"></div>
             </section>
@@ -89,7 +89,7 @@
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
-                        <h2 class="text-lg font-bold tracking-tight text-center">ซัก-อบ All-in-one (AQUA)</h2>
+                        <h2 class="text-lg font-bold tracking-tight text-center">เครื่องซัก-อบ  All-in-one (AQUA)</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-4" id="all-in-one-zone"></div>
                 </section>
@@ -97,7 +97,7 @@
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
-                        <h2 class="text-lg font-bold tracking-tight">โซนเครื่องอบ (Dryer Stack)</h2>
+                        <h2 class="text-lg font-bold tracking-tight">เครื่องอบผ้า (Dryer)</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-4" id="dryer-zone"></div>
                 </section>
@@ -194,7 +194,7 @@ function createMachineHTML(name, info) {
         // Template สำหรับ Card
         return `
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm transition-all flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-60' : ''}">
-                <div class="bg-${themeColor} py-1.5 text-center text-[10px] font-black text-white uppercase tracking-tight">${displayName}</div>
+                <div class="bg-${themeColor} py-1.5 text-center text-[14px] font-black text-white uppercase tracking-tight">${displayName}</div>
                 <div class="flex-grow flex flex-col items-center justify-center p-3">
                     
                     ${capacityText ? `<div class="text-[12px] font-black text-${themeColor} mb-2 tracking-widest px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">${capacityText}</div>` : '<div class="h-[26px]"></div>'}
@@ -207,14 +207,14 @@ function createMachineHTML(name, info) {
                                 stroke-dasharray="${circ}" stroke-dashoffset="${(info.finish_at && Date.parse(info.finish_at) > Date.now()) ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
                             ` : ''}
                         </svg>
-                        <div class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-2xl' : 'text-[12px]'} font-black">
-                            ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFF' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? 
+                        <div class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black">
+                            ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFFLINE' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? 
                                 `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
                                 (info.status.toLowerCase() === 'complete' ? 'DONE' : 'READY') )}
                         </div>
                     </div>
-                    <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'ไม่ได้เชื่อมต่อ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
+                    <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
                     </div>
                 </div>
             </div>`;

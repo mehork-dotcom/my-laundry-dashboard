@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My Laundry Pro Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -107,7 +108,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = { databaseURL: "https://laundry-vending-system-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     const app = initializeApp(firebaseConfig);
@@ -115,6 +116,34 @@
     
     let currentData = null;
     let isAdminMode = false;
+    let liffUserId = null;         // userId จาก LINE LIFF
+    let liffReady = false;         // LIFF init เสร็จแล้วหรือยัง
+
+    // ============================================================
+    // LIFF Initialization
+    // ============================================================
+    const LIFF_ID = '2009916510-BLfQGxyM';
+    const LINE_OA = '@689vulep';
+
+    async function initLiff() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            liffReady = true;
+
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                liffUserId = profile.userId;
+                console.log('✅ LIFF: Login แล้ว userId =', liffUserId.substring(0, 8) + '...');
+            } else {
+                console.log('ℹ️ LIFF: ยังไม่ได้ Login (เปิดนอก LINE)');
+            }
+        } catch (err) {
+            console.warn('⚠️ LIFF init ไม่สำเร็จ (fallback mode):', err.message);
+            liffReady = false;
+        }
+    }
+
+    initLiff();
 
     // ข้อมูลความจุเครื่องตามที่ระบุ
     const machineCapacities = {
@@ -154,7 +183,55 @@
         render();
     }
 
-    window.notifyMe = (name) => alert(`🔔 แจ้งเตือนสำหรับ ${name} เรียบร้อยแล้ว!`);
+    // ============================================================
+    // notifyMe — LIFF 1-Tap (ถ้าเปิดใน LINE) หรือ Deep Link (fallback)
+    // ============================================================
+    const MACHINE_NAMES_TH = {
+        'W1': 'เครื่องซัก 1', 'W2': 'เครื่องซัก 2',
+        'W3': 'เครื่องซัก 3', 'W4': 'เครื่องซัก 4',
+        'D5': 'เครื่องอบ 5',  'D6': 'เครื่องอบ 6',
+        'D7': 'เครื่องอบ 7',  'D8': 'เครื่องอบ 8',
+    };
+
+    window.notifyMe = async (machineId, displayName) => {
+        const btn = document.querySelector(`[data-notify="${machineId}"]`);
+
+        // --- เส้นทาง 1: LIFF พร้อมและ Login แล้ว (1-Tap) ---
+        if (liffReady && liff.isLoggedIn() && liffUserId) {
+            try {
+                if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังลงทะเบียน...'; }
+
+                // บันทึก subscription ลง Firebase โดยตรง
+                await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
+
+                // แสดงผลสำเร็จ
+                if (btn) {
+                    btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
+                    btn.className = btn.className
+                        .replace('bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700', '')
+                        + ' bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 cursor-not-allowed';
+                }
+                console.log('✅ LIFF 1-Tap: บันทึก subscription สำเร็จ', machineId);
+            } catch (err) {
+                console.error('❌ บันทึก subscription ไม่สำเร็จ:', err);
+                if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
+                alert('เกิดข้อผิดพลาด กรุณาลองใหม่ครับ');
+            }
+            return;
+        }
+
+        // --- เส้นทาง 2: อยู่ใน LINE แต่ยังไม่ Login ---
+        if (liffReady && !liff.isLoggedIn()) {
+            liff.login();
+            return;
+        }
+
+        // --- เส้นทาง 3: Fallback — เปิดนอก LINE ใช้ Deep Link ---
+        const lineOA = '@689vulep';
+        const msg = encodeURIComponent('แจ้งเตือน ' + machineId);
+        const url = 'https://line.me/R/oaMessage/' + lineOA + '/?text=' + msg;
+        window.open(url, '_blank');
+    };
 
 function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
@@ -173,7 +250,7 @@ function createMachineHTML(name, info) {
         
         let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);
         
-        const cardHeight = isAqua ? 'h-52 md:h-64' : 'h-48'; 
+        const cardHeight = isAqua ? 'h-52 md:h-64' : 'min-h-[13rem]'; 
         const svgSize = isAqua ? 'w-24 h-24 md:w-32 md:h-32' : 'w-16 h-16';
         const radius = isAqua ? 42 : 28;
         const viewBox = isAqua ? "0 0 100 100" : "0 0 80 80";
@@ -216,6 +293,14 @@ function createMachineHTML(name, info) {
                     <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
                     </div>
+                    ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? `
+                    <button data-notify="${name}" onclick="notifyMe('${name}', '${displayName}')"
+                        class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold
+                               bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400
+                               border border-emerald-200 dark:border-emerald-700
+                               hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition-all">
+                        🔔 แจ้งเตือนฉัน
+                    </button>` : ''}
                 </div>
             </div>`;
     }

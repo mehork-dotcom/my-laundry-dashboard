@@ -266,8 +266,10 @@
             });
         };
 
-        // ปุ่มเปิด LINE OA
+        // ปุ่มเปิด LINE OA — save optimistically ก่อนเปิด LINE
         document.getElementById('modal-open-btn').onclick = () => {
+            subscribedMachines.add(machineId);
+            saveSubscription(machineId); // save ก่อน เพื่อให้จำสถานะตอน reload
             closeLineModal();
             window.location.href = 'https://line.me/R/oaMessage/@689vulep';
         };

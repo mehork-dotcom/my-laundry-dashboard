@@ -118,10 +118,38 @@
     let isAdminMode = false;
     let liffUserId = null;         // userId จาก LINE LIFF
     let liffReady = false;         // LIFF init เสร็จแล้วหรือยัง
-    const subscribedMachines = new Set(); // เก็บเครื่องที่ subscribe แล้ว (ไม่ reset เมื่อ re-render)
+    const subscribedMachines = new Set(); // เก็บเครื่องที่ subscribe แล้ว
 
-    // แก้ Race Condition: ถ้ามี pendingSubscribe ให้ pre-add ทันที
-    // ก่อน Firebase onValue render ทำให้ปุ่มแสดง ✅ ลงทะเบียนแล้ว ทันที
+    // ============================================================
+    // Persist subscriptions ใน localStorage (ไม่หายเมื่อ reload)
+    // ============================================================
+    function loadSavedSubscriptions() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('mylaundry_subs') || '{}');
+            Object.keys(saved).forEach(id => subscribedMachines.add(id));
+        } catch(e) {}
+    }
+
+    function saveSubscription(machineId) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('mylaundry_subs') || '{}');
+            saved[machineId] = Date.now();
+            localStorage.setItem('mylaundry_subs', JSON.stringify(saved));
+        } catch(e) {}
+    }
+
+    function clearSubscription(machineId) {
+        try {
+            const saved = JSON.parse(localStorage.getItem('mylaundry_subs') || '{}');
+            delete saved[machineId];
+            localStorage.setItem('mylaundry_subs', JSON.stringify(saved));
+        } catch(e) {}
+    }
+
+    // โหลด subscriptions ที่บันทึกไว้ก่อน
+    loadSavedSubscriptions();
+
+    // แก้ Race Condition: pre-add pendingSubscribe ก่อน Firebase render
     const _pendingAtLoad = sessionStorage.getItem('pendingSubscribe');
     if (_pendingAtLoad) subscribedMachines.add(_pendingAtLoad);
 
@@ -158,6 +186,7 @@
                         try {
                             await set(ref(database, `laundry_system/subscriptions/${pendingMachine}/${liffUserId}`), true);
                             subscribedMachines.add(pendingMachine);
+                            saveSubscription(pendingMachine); // persist ใน localStorage
                             showToast('ลงทะเบียนแจ้งเตือนเรียบร้อยแล้วครับ!', '✅', 3000);
                             console.log('✅ Auto-subscribe สำเร็จ:', pendingMachine);
                         } catch(e) {
@@ -280,6 +309,7 @@
                 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังลงทะเบียน...'; }
                 await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
                 subscribedMachines.add(machineId);
+                saveSubscription(machineId); // persist ใน localStorage
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
@@ -366,7 +396,7 @@ function createMachineHTML(name, info) {
                         </div>
                     </div>
                     <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
+                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status?.toLowerCase() === 'busy' ? 'กำลังอัปเดต...' : (info.status?.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้')) )}
                     </div>
                     ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? (
                         subscribedMachines.has(name) ? `
@@ -419,6 +449,18 @@ function createMachineHTML(name, info) {
         const root = snap.val();
         if (root) {
             currentData = root.machines;
+
+            // ลบ subscriptions ที่เครื่องว่างแล้วออกจาก localStorage
+            if (currentData) {
+                Object.keys(currentData).forEach(machineId => {
+                    const info = currentData[machineId];
+                    const isBusy = info && info.finish_at && Date.parse(info.finish_at) > Date.now();
+                    if (!isBusy && subscribedMachines.has(machineId)) {
+                        subscribedMachines.delete(machineId);
+                        clearSubscription(machineId);
+                    }
+                });
+            }
             document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${root.last_sync.split(' ')[1]}`;
             render();
         }

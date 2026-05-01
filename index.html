@@ -130,8 +130,9 @@
         try {
             await liff.init({ liffId: LIFF_ID });
             liffReady = true;
+            console.log('✅ LIFF init สำเร็จ | isInClient:', liff.isInClient(), '| isLoggedIn:', liff.isLoggedIn());
 
-            if (liff.isLoggedIn()) {
+            if (liff.isInClient() && liff.isLoggedIn()) {
                 try {
                     // ลอง getDecodedIDToken ก่อน (เสถียรกว่าบน Android)
                     const idToken = liff.getDecodedIDToken();
@@ -196,7 +197,24 @@
     }
 
     // ============================================================
-    // notifyMe — LIFF 1-Tap (ถ้าเปิดใน LINE) หรือ Deep Link (fallback)
+    // openLineUrl — เปิด URL แบบ cross-platform safe
+    // ============================================================
+    function openLineUrl(url) {
+        try {
+            if (liffReady && liff.isInClient()) {
+                // อยู่ใน LIFF จริงๆ ใช้ liff.openWindow
+                liff.openWindow({ url: url, external: false });
+            } else {
+                window.location.href = url;
+            }
+        } catch (e) {
+            // fallback สุดท้าย
+            window.location.href = url;
+        }
+    }
+
+    // ============================================================
+    // notifyMe — LIFF 1-Tap หรือ Deep Link (fallback)
     // ============================================================
     const MACHINE_NAMES_TH = {
         'W1': 'เครื่องซัก 1', 'W2': 'เครื่องซัก 2',
@@ -207,62 +225,40 @@
 
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
+        const deepLinkUrl = 'https://line.me/R/oaMessage/@689vulep/?text=' + encodeURIComponent('แจ้งเตือน ' + machineId);
 
-        // --- เส้นทาง 1: LIFF พร้อมและ Login แล้ว (1-Tap) ---
-        if (liffReady && liff.isLoggedIn() && liffUserId) {
+        // --- เส้นทาง 1: LIFF ใน LINE + มี userId → 1-Tap Firebase ---
+        if (liffReady && liff.isInClient() && liffUserId) {
             try {
                 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังลงทะเบียน...'; }
-
-                // บันทึก subscription ลง Firebase โดยตรง
                 await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
-
-                // บันทึกลง memory เพื่อไม่ให้ re-render รีเซ็ตปุ่ม
                 subscribedMachines.add(machineId);
-
-                // แสดงผลสำเร็จ
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
                     btn.className = 'mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed';
                 }
-                console.log('✅ LIFF 1-Tap: บันทึก subscription สำเร็จ', machineId);
+                console.log('✅ LIFF 1-Tap สำเร็จ:', machineId);
             } catch (err) {
-                console.error('❌ Firebase write error:', err.code, err.message);
+                console.error('❌ Firebase error:', err.code, err.message);
                 if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
-
-                // Fallback: ถ้า Firebase เขียนไม่ได้ ใช้ Deep Link แทน
-                console.warn('⚠️ Fallback to Deep Link...');
-                subscribedMachines.delete(machineId); // เอาออกจาก Set ถ้า fail
-                const fallbackMsg = encodeURIComponent('แจ้งเตือน ' + machineId);
-                const fallbackUrl = 'https://line.me/R/oaMessage/@689vulep/?text=' + fallbackMsg;
-                // ใช้ liff.openWindow บน LIFF (Android-safe)
-                if (liffReady && typeof liff.openWindow === 'function') {
-                    liff.openWindow({ url: fallbackUrl, external: true });
-                } else {
-                    window.open(fallbackUrl, '_blank');
-                }
+                // Firebase fail → fallback Deep Link
+                openLineUrl(deepLinkUrl);
             }
             return;
         }
 
-        // --- เส้นทาง 2: อยู่ใน LINE แต่ยังไม่ Login ---
-        if (liffReady && !liff.isLoggedIn()) {
+        // --- เส้นทาง 2: อยู่ใน LINE แต่ยังไม่ Login → Login ก่อน ---
+        if (liffReady && liff.isInClient() && !liff.isLoggedIn()) {
             liff.login();
             return;
         }
 
-        // --- เส้นทาง 3: Fallback — เปิดนอก LINE ใช้ Deep Link ---
-        const lineOA = '@689vulep';
-        const msg = encodeURIComponent('แจ้งเตือน ' + machineId);
-        const url = 'https://line.me/R/oaMessage/' + lineOA + '/?text=' + msg;
-
-        // ใช้ liff.openWindow ถ้าอยู่ใน LIFF (Android-safe) ไม่งั้นใช้ window.open
-        if (liffReady && typeof liff.openWindow === 'function') {
-            liff.openWindow({ url: url, external: true });
-        } else {
-            window.open(url, '_blank');
-        }
+        // --- เส้นทาง 3: ทุกกรณีอื่น (เปิดนอก LINE / userId ไม่ได้) → Deep Link ---
+        console.log('ℹ️ Fallback Deep Link:', machineId);
+        openLineUrl(deepLinkUrl);
     };
+
 
 function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');

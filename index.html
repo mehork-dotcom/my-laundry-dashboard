@@ -18,6 +18,9 @@
     </script>
     <style>
         body { transition: background-color 0.3s ease, color 0.3s ease; -webkit-tap-highlight-color: transparent; }
+        .skeleton { background: linear-gradient(90deg, var(--color-background-secondary) 25%, var(--color-background-tertiary) 50%, var(--color-background-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .pull-indicator { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: var(--color-background-primary); border-radius: 0 0 20px 20px; padding: 6px 20px; font-size: 12px; color: var(--color-text-secondary); z-index: 100; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         @keyframes slow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-slow-spin { animation: slow-spin 12s linear infinite; }
         .glass-card { backdrop-filter: blur(8px); background: rgba(255, 255, 255, 0.8); }
@@ -83,7 +86,10 @@
                     <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
                     <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone">
+                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                </div>
             </section>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -100,7 +106,10 @@
                         <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
                         <h2 class="text-lg font-bold tracking-tight">เครื่องอบผ้า (Dryer)</h2>
                     </div>
-                    <div class="grid grid-cols-2 gap-4" id="dryer-zone"></div>
+                    <div class="grid grid-cols-2 gap-4" id="dryer-zone">
+                        <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                        <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                    </div>
                 </section>
             </div>
         </div>
@@ -527,14 +536,51 @@ function createMachineHTML(name, info) {
         document.getElementById('last-sync-display').innerText = '⚠️ ไม่สามารถเชื่อมต่อ Firebase ได้';
     });
 
+    let lastSyncTime = null;
+
     onValue(ref(database, 'laundry_system/last_sync'), (snap) => {
         const lastSync = snap.val();
         if (lastSync) {
-            const timePart = lastSync.split(' ')[1] || lastSync;
-            document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${timePart}`;
+            // แปลง "2026-05-01 14:35:00" → Date object
+            lastSyncTime = new Date(lastSync.replace(' ', 'T') + '+07:00');
+            updateRelativeTime();
         }
     }, (error) => {
         console.error('❌ Firebase last_sync permission denied:', error.message);
+    });
+
+    function updateRelativeTime() {
+        if (!lastSyncTime) return;
+        const diff = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
+        let text;
+        if (diff < 60) text = 'อัปเดตเมื่อสักครู่';
+        else if (diff < 3600) text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
+        else text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้ว`;
+        const el = document.getElementById('last-sync-display');
+        if (el) el.innerText = text;
+    }
+
+    // อัปเดต relative time ทุก 30 วินาที
+    setInterval(updateRelativeTime, 30000);
+
+    // Pull-to-Refresh
+    let touchStartY = 0;
+    let isPulling = false;
+    const pullIndicator = document.getElementById('pull-indicator');
+
+    document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchmove', e => {
+        if (window.scrollY === 0 && e.touches[0].clientY - touchStartY > 60) {
+            isPulling = true;
+            if (pullIndicator) pullIndicator.style.display = 'block';
+        }
+    }, { passive: true });
+    document.addEventListener('touchend', () => {
+        if (isPulling) {
+            isPulling = false;
+            if (pullIndicator) pullIndicator.style.display = 'none';
+            if (currentData) render(); // re-render
+        }
     });
 
     // ============================================================
@@ -597,6 +643,9 @@ function createMachineHTML(name, info) {
     // tickCountdown() เรียกทุก 1 วินาทีสำหรับนับถอยหลัง
     setInterval(tickCountdown, 1000);
 </script>
+    <!-- Pull to Refresh Indicator -->
+    <div id="pull-indicator" class="pull-indicator">↓ ดึงลงเพื่อรีเฟรช</div>
+
     <!-- Toast Notification -->
     <div id="toast-notify" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50
          bg-slate-800 dark:bg-slate-700 text-white text-sm font-bold

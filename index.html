@@ -118,6 +118,7 @@
     let isAdminMode = false;
     let liffUserId = null;         // userId จาก LINE LIFF
     let liffReady = false;         // LIFF init เสร็จแล้วหรือยัง
+    const subscribedMachines = new Set(); // เก็บเครื่องที่ subscribe แล้ว (ไม่ reset เมื่อ re-render)
 
     // ============================================================
     // LIFF Initialization
@@ -204,12 +205,14 @@
                 // บันทึก subscription ลง Firebase โดยตรง
                 await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
 
+                // บันทึกลง memory เพื่อไม่ให้ re-render รีเซ็ตปุ่ม
+                subscribedMachines.add(machineId);
+
                 // แสดงผลสำเร็จ
                 if (btn) {
+                    btn.disabled = true;
                     btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
-                    btn.className = btn.className
-                        .replace('bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700', '')
-                        + ' bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 cursor-not-allowed';
+                    btn.className = 'mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed';
                 }
                 console.log('✅ LIFF 1-Tap: บันทึก subscription สำเร็จ', machineId);
             } catch (err) {
@@ -293,14 +296,21 @@ function createMachineHTML(name, info) {
                     <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้') )}
                     </div>
-                    ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? `
+                    ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? (
+                        subscribedMachines.has(name) ? `
+                    <button disabled
+                        class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold
+                               bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500
+                               border border-slate-200 dark:border-slate-700 cursor-not-allowed">
+                        ✅ ลงทะเบียนแล้ว!
+                    </button>` : `
                     <button data-notify="${name}" onclick="notifyMe('${name}', '${displayName}')"
                         class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold
                                bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400
                                border border-emerald-200 dark:border-emerald-700
                                hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition-all">
                         🔔 แจ้งเตือนฉัน
-                    </button>` : ''}
+                    </button>`) : ''}
                 </div>
             </div>`;
     }

@@ -490,8 +490,6 @@ function createMachineHTML(name, info) {
     // อ่าน machines — path ที่มีสิทธิ์อ่าน
     onValue(ref(database, 'laundry_system/machines'), (snap) => {
         currentData = snap.val();
-
-        // ลบ subscriptions ที่เครื่องว่างแล้วออกจาก localStorage
         if (currentData) {
             Object.keys(currentData).forEach(machineId => {
                 const info = currentData[machineId];
@@ -503,15 +501,19 @@ function createMachineHTML(name, info) {
             });
         }
         render();
+    }, (error) => {
+        console.error('❌ Firebase machines permission denied:', error.message);
+        document.getElementById('last-sync-display').innerText = '⚠️ ไม่สามารถเชื่อมต่อ Firebase ได้';
     });
 
-    // อ่าน last_sync แยกต่างหาก
     onValue(ref(database, 'laundry_system/last_sync'), (snap) => {
         const lastSync = snap.val();
         if (lastSync) {
             const timePart = lastSync.split(' ')[1] || lastSync;
             document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${timePart}`;
         }
+    }, (error) => {
+        console.error('❌ Firebase last_sync permission denied:', error.message);
     });
 
     // ============================================================

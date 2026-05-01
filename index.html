@@ -396,7 +396,8 @@ function createMachineHTML(name, info) {
             if (isBusy) return isWasher ? 'blue-500' : 'orange-500';
             if (status === 'busy') return isWasher ? 'blue-500' : 'orange-500';
             if (status === 'complete') return 'purple-500';
-            if (status === 'error' || status === 'outoforder' || status === 'unavailable') return 'red-500';
+            if (status === 'error' || status === 'outoforder') return 'red-500';
+            if (status === 'unavailable') return 'slate-400';
             if (status === 'readytostart') return 'yellow-500';
             return 'emerald-500';
         };

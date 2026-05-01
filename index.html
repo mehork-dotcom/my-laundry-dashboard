@@ -144,6 +144,19 @@
                         liffUserId = profile.userId;
                     }
                     console.log('✅ LIFF: Login แล้ว userId =', liffUserId.substring(0, 8) + '...');
+
+                    // Auto-subscribe หลัง liff.login() redirect กลับมา
+                    const pendingMachine = sessionStorage.getItem('pendingSubscribe');
+                    if (pendingMachine && liffUserId) {
+                        sessionStorage.removeItem('pendingSubscribe');
+                        try {
+                            await set(ref(database, `laundry_system/subscriptions/${pendingMachine}/${liffUserId}`), true);
+                            subscribedMachines.add(pendingMachine);
+                            console.log('✅ Auto-subscribe สำเร็จ:', pendingMachine);
+                        } catch(e) {
+                            console.error('❌ Auto-subscribe fail:', e);
+                        }
+                    }
                 } catch (profileErr) {
                     console.warn('⚠️ ดึง userId ไม่ได้:', profileErr.message);
                 }
@@ -202,10 +215,26 @@
     function showLineModal(machineId) {
         const text = 'แจ้งเตือน ' + machineId;
         document.getElementById('modal-text').textContent = text;
+
+        // ปุ่ม copy
+        document.getElementById('modal-copy-btn').onclick = () => {
+            navigator.clipboard.writeText(text).then(() => {
+                document.getElementById('modal-copy-btn').innerHTML = '✅ คัดลอกแล้ว!';
+                setTimeout(() => {
+                    document.getElementById('modal-copy-btn').innerHTML = '📋 คัดลอกข้อความ';
+                }, 2000);
+            }).catch(() => {
+                // fallback สำหรับ browser ที่ไม่รองรับ clipboard
+                document.getElementById('modal-text').select?.();
+            });
+        };
+
+        // ปุ่มเปิด LINE OA
         document.getElementById('modal-open-btn').onclick = () => {
             closeLineModal();
             window.location.href = 'https://line.me/R/oaMessage/@689vulep';
         };
+
         document.getElementById('line-modal').classList.remove('hidden');
     }
 
@@ -246,9 +275,10 @@
             return;
         }
 
-        // --- เส้นทาง 2: อยู่ใน LINE แต่ไม่มี userId → บังคับ Login ---
+        // --- เส้นทาง 2: อยู่ใน LINE แต่ไม่มี userId → Login ก่อน แล้ว auto-subscribe ---
         if (liffReady && liff.isInClient()) {
-            console.log('ℹ️ อยู่ใน LINE แต่ไม่มี userId → บังคับ login');
+            console.log('ℹ️ อยู่ใน LINE แต่ไม่มี userId → บันทึก pending แล้ว login');
+            sessionStorage.setItem('pendingSubscribe', machineId);
             liff.login();
             return;
         }
@@ -386,8 +416,13 @@ function createMachineHTML(name, info) {
             <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">พิมพ์ข้อความนี้ใน LINE OA แล้วกด Send</p>
             <div id="modal-text"
                  class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700
-                        rounded-xl px-4 py-3 text-lg font-bold text-emerald-700 dark:text-emerald-300 mb-5 select-all">
+                        rounded-xl px-4 py-3 text-lg font-bold text-emerald-700 dark:text-emerald-300 mb-2 select-all">
             </div>
+            <button id="modal-copy-btn"
+                class="w-full mb-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-700
+                       text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                📋 คัดลอกข้อความ
+            </button>
             <div class="flex gap-3">
                 <button onclick="closeLineModal()"
                     class="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-600

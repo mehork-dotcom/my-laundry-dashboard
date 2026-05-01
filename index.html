@@ -216,7 +216,7 @@
 
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
-        const deepLinkUrl = 'https://line.me/R/oaMessage/@689vulep/?text=' + encodeURIComponent('แจ้งเตือน ' + machineId);
+        const deepLinkUrl = 'https://line.me/R/oaMessage/@689vulep?text=' + encodeURIComponent('แจ้งเตือน ' + machineId);
 
         // --- เส้นทาง 1: LIFF ใน LINE + มี userId → 1-Tap Firebase ---
         if (liffReady && liff.isInClient() && liffUserId) {

@@ -20,6 +20,8 @@
         body { transition: background-color 0.3s ease, color 0.3s ease; -webkit-tap-highlight-color: transparent; }
         .skeleton { background: linear-gradient(90deg, var(--color-background-secondary) 25%, var(--color-background-tertiary) 50%, var(--color-background-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes statusPulse { 0%,100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px var(--pulse-color, #3498db66); } 60% { box-shadow: 0 0 0 6px var(--pulse-color, #3498db22); } }
+        .status-changed { animation: statusPulse 1.2s ease-out; }
         .pull-indicator { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: var(--color-background-primary); border-radius: 0 0 20px 20px; padding: 6px 20px; font-size: 12px; color: var(--color-text-secondary); z-index: 100; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         @keyframes slow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-slow-spin { animation: slow-spin 12s linear infinite; }
@@ -484,7 +486,9 @@ function createMachineHTML(name, info) {
                                border border-emerald-200 dark:border-emerald-700
                                hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition-all">
                         🔔 แจ้งเตือนฉัน
-                    </button>`) : ''}
+                    </button>
+                    ${(info.subscriber_count > 0) ? `<div class="text-center text-[10px] text-slate-400 dark:text-slate-500 mt-1">มี ${info.subscriber_count} คน รอแจ้งเตือน</div>` : ''}
+                    `) : ''}
                 </div>
             </div>`;
     }
@@ -518,11 +522,27 @@ function createMachineHTML(name, info) {
     }
 
     // อ่าน machines — path ที่มีสิทธิ์อ่าน
+    let previousStatuses = {}; // track สถานะก่อนหน้าสำหรับ animation
+
     onValue(ref(database, 'laundry_system/machines'), (snap) => {
-        currentData = snap.val();
+        const newData = snap.val();
+        const changedMachines = new Set();
+
+        if (newData && currentData) {
+            // เปรียบเทียบสถานะก่อน-หลัง
+            Object.keys(newData).forEach(id => {
+                const oldStatus = previousStatuses[id];
+                const newStatus = newData[id]?.status;
+                if (oldStatus && oldStatus !== newStatus) changedMachines.add(id);
+            });
+        }
+
+        currentData = newData;
+
         if (currentData) {
             Object.keys(currentData).forEach(machineId => {
                 const info = currentData[machineId];
+                previousStatuses[machineId] = info?.status;
                 const isBusy = info && info.finish_at && Date.parse(info.finish_at) > Date.now();
                 if (!isBusy && subscribedMachines.has(machineId)) {
                     subscribedMachines.delete(machineId);
@@ -531,6 +551,23 @@ function createMachineHTML(name, info) {
             });
         }
         render();
+
+        // Trigger animation บน card ที่เปลี่ยนสถานะ
+        if (changedMachines.size > 0) {
+            setTimeout(() => {
+                changedMachines.forEach(id => {
+                    // หา card โดย timer element id
+                    const timerEl = document.getElementById('timer-' + id);
+                    const card = timerEl?.closest('.bg-white, .dark\:bg-slate-900');
+                    if (card) {
+                        card.classList.remove('status-changed');
+                        void card.offsetWidth; // force reflow
+                        card.classList.add('status-changed');
+                        setTimeout(() => card.classList.remove('status-changed'), 1300);
+                    }
+                });
+            }, 100);
+        }
     }, (error) => {
         console.error('❌ Firebase machines permission denied:', error.message);
         document.getElementById('last-sync-display').innerText = '⚠️ ไม่สามารถเชื่อมต่อ Firebase ได้';

@@ -197,20 +197,11 @@
     }
 
     // ============================================================
-    // openLineUrl — เปิด URL แบบ cross-platform safe
+    // openLineUrl — ใช้ window.location.href เสมอ (ทำงานได้ทุก platform)
+    // LINE OA URL (line.me/R/oaMessage) จะถูก intercept โดย LINE app อัตโนมัติ
     // ============================================================
     function openLineUrl(url) {
-        try {
-            if (liffReady && liff.isInClient()) {
-                // อยู่ใน LIFF จริงๆ ใช้ liff.openWindow
-                liff.openWindow({ url: url, external: false });
-            } else {
-                window.location.href = url;
-            }
-        } catch (e) {
-            // fallback สุดท้าย
-            window.location.href = url;
-        }
+        window.location.href = url;
     }
 
     // ============================================================

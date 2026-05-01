@@ -120,6 +120,11 @@
     let liffReady = false;         // LIFF init เสร็จแล้วหรือยัง
     const subscribedMachines = new Set(); // เก็บเครื่องที่ subscribe แล้ว (ไม่ reset เมื่อ re-render)
 
+    // แก้ Race Condition: ถ้ามี pendingSubscribe ให้ pre-add ทันที
+    // ก่อน Firebase onValue render ทำให้ปุ่มแสดง ✅ ลงทะเบียนแล้ว ทันที
+    const _pendingAtLoad = sessionStorage.getItem('pendingSubscribe');
+    if (_pendingAtLoad) subscribedMachines.add(_pendingAtLoad);
+
     // ============================================================
     // LIFF Initialization
     // ============================================================
@@ -149,11 +154,14 @@
                     const pendingMachine = sessionStorage.getItem('pendingSubscribe');
                     if (pendingMachine && liffUserId) {
                         sessionStorage.removeItem('pendingSubscribe');
+                        showToast('กำลังลงทะเบียนแจ้งเตือน...', '⏳', 4000);
                         try {
                             await set(ref(database, `laundry_system/subscriptions/${pendingMachine}/${liffUserId}`), true);
                             subscribedMachines.add(pendingMachine);
+                            showToast('ลงทะเบียนแจ้งเตือนเรียบร้อยแล้วครับ!', '✅', 3000);
                             console.log('✅ Auto-subscribe สำเร็จ:', pendingMachine);
                         } catch(e) {
+                            showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', '❌', 3000);
                             console.error('❌ Auto-subscribe fail:', e);
                         }
                     }
@@ -241,6 +249,17 @@
     window.closeLineModal = () => {
         document.getElementById('line-modal').classList.add('hidden');
     };
+
+    // ============================================================
+    // Toast Notification
+    // ============================================================
+    function showToast(msg, icon = '⏳', duration = 3000) {
+        const toast = document.getElementById('toast-notify');
+        document.getElementById('toast-icon').textContent = icon;
+        document.getElementById('toast-msg').textContent = msg;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), duration);
+    }
 
     // ============================================================
     // notifyMe — LIFF 1-Tap หรือ Deep Link (fallback)
@@ -407,6 +426,14 @@ function createMachineHTML(name, info) {
 
     setInterval(render, 1000);
 </script>
+    <!-- Toast Notification -->
+    <div id="toast-notify" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+         bg-slate-800 dark:bg-slate-700 text-white text-sm font-bold
+         px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 whitespace-nowrap">
+        <span id="toast-icon">⏳</span>
+        <span id="toast-msg">กำลังลงทะเบียนแจ้งเตือน...</span>
+    </div>
+
     <!-- Instruction Modal สำหรับ Deep Link fallback -->
     <div id="line-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-6"
          style="background:rgba(0,0,0,0.7)">

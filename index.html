@@ -216,9 +216,13 @@
                 }
                 console.log('✅ LIFF 1-Tap: บันทึก subscription สำเร็จ', machineId);
             } catch (err) {
-                console.error('❌ บันทึก subscription ไม่สำเร็จ:', err);
+                console.error('❌ Firebase write error:', err.code, err.message);
                 if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
-                alert('เกิดข้อผิดพลาด กรุณาลองใหม่ครับ');
+
+                // Fallback: ถ้า Firebase เขียนไม่ได้ ใช้ Deep Link แทน
+                console.warn('⚠️ Fallback to Deep Link...');
+                const msg = encodeURIComponent('แจ้งเตือน ' + machineId);
+                window.open('https://line.me/R/oaMessage/@689vulep/?text=' + msg, '_blank');
             }
             return;
         }

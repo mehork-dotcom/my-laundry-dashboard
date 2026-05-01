@@ -472,8 +472,8 @@ function createMachineHTML(name, info) {
                         })()) )}
                     </div>
                     ${finishTimeStr ? `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">เสร็จ ${finishTimeStr}</div>` : ''}
-                    ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? (
-                        subscribedMachines.has(name) ? `
+                    ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? `
+                    ${subscribedMachines.has(name) ? `
                     <button disabled
                         class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold
                                bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500
@@ -486,9 +486,9 @@ function createMachineHTML(name, info) {
                                border border-emerald-200 dark:border-emerald-700
                                hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:scale-95 transition-all">
                         🔔 แจ้งเตือนฉัน
-                    </button>
+                    </button>`}
                     ${(info.subscriber_count > 0) ? `<div class="text-center text-[10px] text-slate-400 dark:text-slate-500 mt-1">มี ${info.subscriber_count} คน รอแจ้งเตือน</div>` : ''}
-                    `) : ''}
+                    ` : ''}
                 </div>
             </div>`;
     }

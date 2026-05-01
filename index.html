@@ -108,7 +108,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = { databaseURL: "https://laundry-vending-system-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     const app = initializeApp(firebaseConfig);
@@ -178,6 +178,9 @@
                     }
                     console.log('✅ LIFF: Login แล้ว userId =', liffUserId.substring(0, 8) + '...');
 
+                    // โหลด subscriptions จาก Firebase (แก้ปัญหา iOS localStorage ไม่ persist)
+                    await loadUserSubscriptionsFromFirebase(liffUserId);
+
                     // Auto-subscribe หลัง liff.login() redirect กลับมา
                     const pendingMachine = sessionStorage.getItem('pendingSubscribe');
                     if (pendingMachine && liffUserId) {
@@ -244,6 +247,28 @@
         document.getElementById('view-user').className = !admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
         document.getElementById('view-admin').className = admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
         render();
+    }
+
+    // ============================================================
+    // โหลด subscriptions จาก Firebase ตาม userId
+    // แก้ปัญหา iOS LIFF ที่ localStorage ไม่ persist ระหว่าง sessions
+    // ============================================================
+    async function loadUserSubscriptionsFromFirebase(userId) {
+        try {
+            const subsSnap = await get(ref(database, 'laundry_system/subscriptions'));
+            if (subsSnap.exists()) {
+                const allSubs = subsSnap.val();
+                Object.keys(allSubs).forEach(machineId => {
+                    if (allSubs[machineId] && allSubs[machineId][userId] === true) {
+                        subscribedMachines.add(machineId);
+                        saveSubscription(machineId); // sync กลับไป localStorage ด้วย
+                        console.log('✅ Found active subscription:', machineId);
+                    }
+                });
+            }
+        } catch(e) {
+            console.warn('⚠️ โหลด subscriptions จาก Firebase ไม่ได้:', e.message);
+        }
     }
 
     // ============================================================

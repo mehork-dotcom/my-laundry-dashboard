@@ -426,11 +426,11 @@ function createMachineHTML(name, info) {
                         <svg viewBox="${viewBox}" class="w-full h-full">
                             <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-slate-100 dark:text-slate-800" stroke-width="${isAqua ? 6 : 4}" fill="transparent"/>
                             ${(info && info.status?.toLowerCase() !== 'offline') ? `
-                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-${themeColor} transition-all duration-1000" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
+                            <circle id="circle-${name}" cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-${themeColor} transition-all duration-1000" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
                                 stroke-dasharray="${circ}" stroke-dashoffset="${isBusy ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
                             ` : ''}
                         </svg>
-                        <div class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black">
+                        <div id="timer-${name}" class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black">
                             ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFFLINE' : ( isBusy ? 
                                 `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
                                 (isUpdating ? 'DONE' : (info.status?.toLowerCase() === 'complete' ? 'DONE' : 'READY')) )}
@@ -508,7 +508,65 @@ function createMachineHTML(name, info) {
         }
     });
 
-    setInterval(render, 1000);
+    // ============================================================
+    // tickCountdown: อัปเดตเฉพาะ countdown ทุก 1 วินาที
+    // ไม่ re-render DOM ทั้งหมด ประหยัด CPU มากขึ้น
+    // ============================================================
+    function tickCountdown() {
+        if (!currentData) return;
+        Object.keys(currentData).forEach(name => {
+            const info = currentData[name];
+            if (!info || !info.finish_at) return;
+            const remaining = Date.parse(info.finish_at) - Date.now();
+            const timerEl = document.getElementById('timer-' + name);
+            const circleEl = document.getElementById('circle-' + name);
+            if (!timerEl) return;
+
+            const isWasher = name.startsWith('W');
+            const radius = 28;
+            const circ = 2 * Math.PI * radius;
+
+            if (remaining > 0) {
+                const m = Math.floor(remaining / 60000);
+                const s = Math.floor((remaining % 60000) / 1000);
+                timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+                if (circleEl) {
+                    const offset = circ * (1 - (1 - (remaining / (30 * 60000))));
+                    circleEl.style.strokeDashoffset = Math.max(0, offset);
+                }
+            } else {
+                // countdown ถึง 0 → แสดง DONE รอ Firebase อัปเดต
+                if (info.status?.toLowerCase() === 'busy') {
+                    timerEl.textContent = 'DONE';
+                    if (circleEl) circleEl.style.strokeDashoffset = 0;
+                }
+            }
+        });
+
+        // อัปเดต stats bar ด้วย
+        if (currentData) {
+            let stats = { ready: 0, busy: 0, done: 0 };
+            Object.keys(currentData).forEach(n => {
+                if (n.startsWith('AQUA')) return;
+                const info = currentData[n];
+                if (!info) return;
+                const busy = info.finish_at && Date.parse(info.finish_at) > Date.now();
+                if (busy) stats.busy++;
+                else if (info.status?.toLowerCase() === 'complete' || info.status?.toLowerCase() === 'busy') stats.done++;
+                else stats.ready++;
+            });
+            const rEl = document.getElementById('stat-ready');
+            const bEl = document.getElementById('stat-busy');
+            const dEl = document.getElementById('stat-done');
+            if (rEl) rEl.innerText = stats.ready;
+            if (bEl) bEl.innerText = stats.busy;
+            if (dEl) dEl.innerText = stats.done;
+        }
+    }
+
+    // render() เรียกเฉพาะตอน Firebase อัปเดต
+    // tickCountdown() เรียกทุก 1 วินาทีสำหรับนับถอยหลัง
+    setInterval(tickCountdown, 1000);
 </script>
     <!-- Toast Notification -->
     <div id="toast-notify" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50

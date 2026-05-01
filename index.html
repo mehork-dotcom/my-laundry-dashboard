@@ -94,7 +94,47 @@
                 </div>
             </section>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Admin Dashboard Panel -->
+            <div id="admin-panel" class="hidden space-y-4">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-2xl font-black text-blue-500" id="admin-total-today">-</div>
+                        <div class="text-[11px] text-slate-400 mt-1">รอบวันนี้</div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-2xl font-black text-emerald-500" id="admin-revenue-today">-</div>
+                        <div class="text-[11px] text-slate-400 mt-1">รายได้โดยประมาณ (฿)</div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="text-2xl font-black text-orange-400" id="admin-peak-hour">-</div>
+                        <div class="text-[11px] text-slate-400 mt-1">ชั่วโมงคนแน่น</div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงยอดนิยม (วันนี้)</div>
+                    <div class="flex items-end gap-[3px] h-28 px-1" id="peak-hour-chart">
+                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                    </div>
+                    <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1" id="peak-hour-labels"></div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">🏆 เครื่องยอดนิยม (วันนี้)</div>
+                    <div id="machine-usage-list" class="space-y-2">
+                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📅 วันที่คนใช้บริการมากที่สุด (7 วันล่าสุด)</div>
+                    <div class="flex items-end gap-1 h-20 px-1" id="peak-day-chart">
+                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                    </div>
+                    <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1">
+                        <span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span>อา</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="user-panel-aqua-dryer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-6">
                         <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
@@ -257,7 +297,98 @@
         isAdminMode = admin;
         document.getElementById('view-user').className = !admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
         document.getElementById('view-admin').className = admin ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
+
+        // แสดง/ซ่อน panels
+        document.getElementById('admin-panel').classList.toggle('hidden', !admin);
+        const userAquaDryer = document.getElementById('user-panel-aqua-dryer');
+        if (userAquaDryer) userAquaDryer.classList.toggle('hidden', admin);
+
+        if (admin) loadAdminStats();
         render();
+    }
+
+    // ============================================================
+    // Admin Dashboard — โหลด History Stats
+    // ============================================================
+    async function loadAdminStats() {
+        const today = new Date();
+        const TZ = 7 * 60;
+        const localDate = new Date(today.getTime() + (TZ - today.getTimezoneOffset()) * 60000);
+        const dateStr = localDate.toISOString().slice(0, 10);
+
+        try {
+            // โหลด history วันนี้
+            const snap = await get(ref(database, `laundry_system/history/${dateStr}`));
+            const todayData = snap.exists() ? Object.values(snap.val()) : [];
+
+            // Summary stats
+            const total = todayData.length;
+            const revenue = todayData.reduce((s, r) => s + (r.price || 0), 0);
+            document.getElementById('admin-total-today').innerText = total;
+            document.getElementById('admin-revenue-today').innerText = revenue.toLocaleString();
+
+            // Peak Hour
+            const hourCounts = Array(24).fill(0);
+            todayData.forEach(r => { if (r.hour !== undefined) hourCounts[r.hour]++; });
+            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+            document.getElementById('admin-peak-hour').innerText = total > 0 ? `${peakHour}:00` : '-';
+
+            // Peak Hour Chart (แสดงชั่วโมง 6-22)
+            const displayHours = Array.from({length: 17}, (_, i) => i + 6);
+            const maxCount = Math.max(...displayHours.map(h => hourCounts[h]), 1);
+            const chartEl = document.getElementById('peak-hour-chart');
+            const labelsEl = document.getElementById('peak-hour-labels');
+            chartEl.innerHTML = displayHours.map(h => {
+                const count = hourCounts[h];
+                const pct = Math.round((count / maxCount) * 100);
+                const isPeak = h === peakHour && total > 0;
+                return `<div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="text-[9px] text-slate-400">${count || ''}</div>
+                    <div class="w-full rounded-t-sm transition-all" style="height:${Math.max(pct, 2)}%;background:${isPeak ? '#f97316' : '#3b82f6'}44;border-top:2px solid ${isPeak ? '#f97316' : '#3b82f680'}"></div>
+                </div>`;
+            }).join('');
+            labelsEl.innerHTML = displayHours.filter((_, i) => i % 3 === 0).map(h => `<span>${h}</span>`).join('');
+
+            // Machine Usage
+            const machineCount = {};
+            todayData.forEach(r => { machineCount[r.machine_id] = (machineCount[r.machine_id] || 0) + 1; });
+            const sorted = Object.entries(machineCount).sort((a, b) => b[1] - a[1]);
+            const maxM = sorted[0]?.[1] || 1;
+            const NAMES = {'W1':'เครื่องซัก 1','W2':'เครื่องซัก 2','W3':'เครื่องซัก 3','W4':'เครื่องซัก 4','D5':'เครื่องอบ 5','D6':'เครื่องอบ 6','D7':'เครื่องอบ 7','D8':'เครื่องอบ 8'};
+            document.getElementById('machine-usage-list').innerHTML = sorted.length ? sorted.map(([id, cnt], i) => `
+                <div class="flex items-center gap-2">
+                    <div class="text-xs text-slate-400 w-4">${i+1}</div>
+                    <div class="text-xs font-medium text-slate-700 dark:text-slate-200 w-20">${NAMES[id] || id}</div>
+                    <div class="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full h-2">
+                        <div class="h-2 rounded-full bg-blue-400" style="width:${Math.round(cnt/maxM*100)}%"></div>
+                    </div>
+                    <div class="text-xs font-bold text-slate-500 w-6 text-right">${cnt}</div>
+                </div>`).join('') : '<div class="text-xs text-slate-400">ยังไม่มีข้อมูลวันนี้</div>';
+
+            // Day of Week (7 วันล่าสุด)
+            const dayCounts = Array(7).fill(0);
+            const snapAll = await get(ref(database, 'laundry_system/history'));
+            if (snapAll.exists()) {
+                Object.values(snapAll.val()).forEach(dayData => {
+                    Object.values(dayData).forEach(r => {
+                        if (r.day_of_week !== undefined) dayCounts[r.day_of_week]++;
+                    });
+                });
+            }
+            const maxD = Math.max(...dayCounts, 1);
+            document.getElementById('peak-day-chart').innerHTML = dayCounts.map((cnt, d) => {
+                const pct = Math.round((cnt / maxD) * 100);
+                const isToday = d === localDate.getDay() === 0 ? 6 : localDate.getDay() - 1;
+                return `<div class="flex-1 flex flex-col items-center gap-1">
+                    <div class="text-[9px] text-slate-400">${cnt || ''}</div>
+                    <div class="w-full rounded-t-sm" style="height:${Math.max(pct, 4)}%;background:#a855f744;border-top:2px solid #a855f780"></div>
+                </div>`;
+            }).join('');
+
+        } catch(e) {
+            console.error('Admin stats error:', e);
+            document.getElementById('admin-total-today').innerText = 'N/A';
+        }
     }
 
     // ============================================================

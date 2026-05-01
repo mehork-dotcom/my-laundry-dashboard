@@ -487,24 +487,30 @@ function createMachineHTML(name, info) {
         document.getElementById('stat-done').innerText = stats.done;
     }
 
-    onValue(ref(database, 'laundry_system'), (snap) => {
-        const root = snap.val();
-        if (root) {
-            currentData = root.machines;
+    // อ่าน machines — path ที่มีสิทธิ์อ่าน
+    onValue(ref(database, 'laundry_system/machines'), (snap) => {
+        currentData = snap.val();
 
-            // ลบ subscriptions ที่เครื่องว่างแล้วออกจาก localStorage
-            if (currentData) {
-                Object.keys(currentData).forEach(machineId => {
-                    const info = currentData[machineId];
-                    const isBusy = info && info.finish_at && Date.parse(info.finish_at) > Date.now();
-                    if (!isBusy && subscribedMachines.has(machineId)) {
-                        subscribedMachines.delete(machineId);
-                        clearSubscription(machineId);
-                    }
-                });
-            }
-            document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${root.last_sync.split(' ')[1]}`;
-            render();
+        // ลบ subscriptions ที่เครื่องว่างแล้วออกจาก localStorage
+        if (currentData) {
+            Object.keys(currentData).forEach(machineId => {
+                const info = currentData[machineId];
+                const isBusy = info && info.finish_at && Date.parse(info.finish_at) > Date.now();
+                if (!isBusy && subscribedMachines.has(machineId)) {
+                    subscribedMachines.delete(machineId);
+                    clearSubscription(machineId);
+                }
+            });
+        }
+        render();
+    });
+
+    // อ่าน last_sync แยกต่างหาก
+    onValue(ref(database, 'laundry_system/last_sync'), (snap) => {
+        const lastSync = snap.val();
+        if (lastSync) {
+            const timePart = lastSync.split(' ')[1] || lastSync;
+            document.getElementById('last-sync-display').innerText = `อัปเดตล่าสุด: ${timePart}`;
         }
     });
 

@@ -394,9 +394,23 @@ function createMachineHTML(name, info) {
             const status = info.status.toLowerCase();
             const isBusy = info.finish_at && Date.parse(info.finish_at) > Date.now();
             if (isBusy) return isWasher ? 'blue-500' : 'orange-500';
-            if (status === 'complete') return 'purple-500'; // เช็คจาก status เท่านั้น ไม่ใช้ finish_at
+            // countdown ถึง 0 แต่ Firebase ยังเป็น Busy → สีเดิมค้างไว้
+            if (status === 'busy') return isWasher ? 'blue-500' : 'orange-500';
+            if (status === 'complete') return 'purple-500';
             return 'emerald-500';
         };
+
+        // ตรวจสอบ: countdown ถึง 0 แต่ Firebase ยังไม่อัปเดต
+        const isBusy = info && info.finish_at && Date.parse(info.finish_at) > Date.now();
+        const isUpdating = info && !isBusy && info.status?.toLowerCase() === 'busy';
+
+        // คำนวณเวลาเสร็จ (Issue 3)
+        const finishTimeStr = (info && info.finish_at && isBusy) ? (() => {
+            const d = new Date(Date.parse(info.finish_at));
+            const h = d.getHours().toString().padStart(2,'0');
+            const m = d.getMinutes().toString().padStart(2,'0');
+            return h + ':' + m + ' น.';
+        })() : null;
 
         const themeColor = getStatusColor(info, isWasher);
 
@@ -413,18 +427,19 @@ function createMachineHTML(name, info) {
                             <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-slate-100 dark:text-slate-800" stroke-width="${isAqua ? 6 : 4}" fill="transparent"/>
                             ${(info && info.status?.toLowerCase() !== 'offline') ? `
                             <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-${themeColor} transition-all duration-1000" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
-                                stroke-dasharray="${circ}" stroke-dashoffset="${(info.finish_at && Date.parse(info.finish_at) > Date.now()) ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
+                                stroke-dasharray="${circ}" stroke-dashoffset="${isBusy ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
                             ` : ''}
                         </svg>
                         <div class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black">
-                            ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFFLINE' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? 
+                            ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFFLINE' : ( isBusy ? 
                                 `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
-                                (info.status.toLowerCase() === 'complete' ? 'DONE' : 'READY') )}
+                                (isUpdating ? 'DONE' : (info.status?.toLowerCase() === 'complete' ? 'DONE' : 'READY')) )}
                         </div>
                     </div>
                     <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( (info.finish_at && Date.parse(info.finish_at) > Date.now()) ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (info.status?.toLowerCase() === 'busy' ? 'กำลังอัปเดต...' : (info.status?.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้')) )}
+                        ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( isBusy ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (isUpdating ? 'กำลังอัปเดต...' : (info.status?.toLowerCase() === 'complete' ? 'รอนำผ้าออก' : 'ว่างพร้อมใช้')) )}
                     </div>
+                    ${finishTimeStr ? `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">เสร็จ ${finishTimeStr}</div>` : ''}
                     ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? (
                         subscribedMachines.has(name) ? `
                     <button disabled

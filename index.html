@@ -132,9 +132,20 @@
             liffReady = true;
 
             if (liff.isLoggedIn()) {
-                const profile = await liff.getProfile();
-                liffUserId = profile.userId;
-                console.log('✅ LIFF: Login แล้ว userId =', liffUserId.substring(0, 8) + '...');
+                try {
+                    // ลอง getDecodedIDToken ก่อน (เสถียรกว่าบน Android)
+                    const idToken = liff.getDecodedIDToken();
+                    if (idToken && idToken.sub) {
+                        liffUserId = idToken.sub;
+                    } else {
+                        // fallback ไป getProfile
+                        const profile = await liff.getProfile();
+                        liffUserId = profile.userId;
+                    }
+                    console.log('✅ LIFF: Login แล้ว userId =', liffUserId.substring(0, 8) + '...');
+                } catch (profileErr) {
+                    console.warn('⚠️ ดึง userId ไม่ได้:', profileErr.message);
+                }
             } else {
                 console.log('ℹ️ LIFF: ยังไม่ได้ Login (เปิดนอก LINE)');
             }
@@ -221,8 +232,15 @@
 
                 // Fallback: ถ้า Firebase เขียนไม่ได้ ใช้ Deep Link แทน
                 console.warn('⚠️ Fallback to Deep Link...');
-                const msg = encodeURIComponent('แจ้งเตือน ' + machineId);
-                window.open('https://line.me/R/oaMessage/@689vulep/?text=' + msg, '_blank');
+                subscribedMachines.delete(machineId); // เอาออกจาก Set ถ้า fail
+                const fallbackMsg = encodeURIComponent('แจ้งเตือน ' + machineId);
+                const fallbackUrl = 'https://line.me/R/oaMessage/@689vulep/?text=' + fallbackMsg;
+                // ใช้ liff.openWindow บน LIFF (Android-safe)
+                if (liffReady && typeof liff.openWindow === 'function') {
+                    liff.openWindow({ url: fallbackUrl, external: true });
+                } else {
+                    window.open(fallbackUrl, '_blank');
+                }
             }
             return;
         }
@@ -237,7 +255,13 @@
         const lineOA = '@689vulep';
         const msg = encodeURIComponent('แจ้งเตือน ' + machineId);
         const url = 'https://line.me/R/oaMessage/' + lineOA + '/?text=' + msg;
-        window.open(url, '_blank');
+
+        // ใช้ liff.openWindow ถ้าอยู่ใน LIFF (Android-safe) ไม่งั้นใช้ window.open
+        if (liffReady && typeof liff.openWindow === 'function') {
+            liff.openWindow({ url: url, external: true });
+        } else {
+            window.open(url, '_blank');
+        }
     };
 
 function createMachineHTML(name, info) {

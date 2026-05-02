@@ -60,103 +60,136 @@
         </div>
     </header>
 
-    <div class="max-w-[1400px] mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <aside class="lg:col-span-3">
-            <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 sticky top-24">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">ภาพรวมระบบ</h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-end">
-                        <span class="text-sm font-bold text-slate-500">ว่างพร้อมใช้</span>
-                        <span id="stat-ready" class="text-3xl font-black text-emerald-500">0</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                        <span class="text-sm font-bold text-slate-500">กำลังทำงาน</span>
-                        <span id="stat-busy" class="text-3xl font-black text-blue-500">0</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                        <span class="text-sm font-bold text-slate-500">ซักเสร็จแล้ว</span>
-                        <span id="stat-done" class="text-3xl font-black text-purple-500">0</span>
-                    </div>
+    <div class="max-w-2xl mx-auto px-4 space-y-4 pb-10">
+
+        <!-- 1. ภาพรวมระบบ — 3 cards เสมอ ทั้ง user และ admin -->
+        <div>
+            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">ภาพรวมระบบ</h3>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div id="stat-ready" class="text-2xl font-black text-emerald-500">0</div>
+                    <div class="text-[11px] text-slate-400 mt-1">ว่างพร้อมใช้</div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div id="stat-busy" class="text-2xl font-black text-blue-500">0</div>
+                    <div class="text-[11px] text-slate-400 mt-1">กำลังทำงาน</div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div id="stat-done" class="text-2xl font-black text-purple-500">0</div>
+                    <div class="text-[11px] text-slate-400 mt-1">ซักเสร็จแล้ว</div>
                 </div>
             </div>
-        </aside>
-
-        <div class="lg:col-span-9 space-y-6">
-            <div id="user-content">
-            <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
-                <div class="flex items-center gap-2 mb-6">
-                    <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
-                    <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone">
-                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                </div>
-            </section>
-
-            <!-- Admin Dashboard Panel -->
-            <div id="admin-panel" class="hidden space-y-4">
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="text-2xl font-black text-blue-500" id="admin-total-today">-</div>
-                        <div class="text-[11px] text-slate-400 mt-1">รอบวันนี้</div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="text-2xl font-black text-emerald-500" id="admin-revenue-today">-</div>
-                        <div class="text-[11px] text-slate-400 mt-1">รายได้โดยประมาณ (฿)</div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
-                        <div class="text-2xl font-black text-orange-400" id="admin-peak-hour">-</div>
-                        <div class="text-[11px] text-slate-400 mt-1">ชั่วโมงคนแน่น</div>
-                    </div>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงที่มีคนใช้บริการมากที่สุด (วันนี้)</div>
-                    <div class="flex items-end gap-[2px] px-1 min-h-[80px]" id="peak-hour-chart" style="align-items:flex-end">
-                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
-                    </div>
-                    <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1" id="peak-hour-labels"></div>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">🏆 เครื่องยอดนิยม (วันนี้)</div>
-                    <div id="machine-usage-list" class="space-y-2">
-                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
-                    </div>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📅 วันที่คนใช้บริการมากที่สุด (7 วันล่าสุด)</div>
-                    <div class="flex items-end gap-1 px-1 min-h-[60px]" id="peak-day-chart" style="align-items:flex-end">
-                        <div class="text-xs text-slate-400">กำลังโหลด...</div>
-                    </div>
-                    <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1">
-                        <span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span>อา</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="user-panel-aqua-dryer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="flex items-center gap-2 mb-6">
-                        <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
-                        <h2 class="text-lg font-bold tracking-tight text-center">เครื่องซัก-อบ  All-in-one (AQUA)</h2>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4" id="all-in-one-zone"></div>
-                </section>
-
-                <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="flex items-center gap-2 mb-6">
-                        <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
-                        <h2 class="text-lg font-bold tracking-tight">เครื่องอบผ้า (Dryer)</h2>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4" id="dryer-zone">
-                        <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                        <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                    </div>
-                </section>
-            </div>
-            </div><!-- /user-content -->
         </div>
+
+        <!-- 2-6. Admin-only Panel -->
+        <div id="admin-panel" class="hidden space-y-4">
+
+            <!-- 2. สรุปรอบ / รายได้ / ชั่วโมงแน่น -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-2xl font-black text-blue-500" id="admin-total-today">-</div>
+                    <div class="text-[11px] text-slate-400 mt-1">รอบวันนี้</div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-2xl font-black text-emerald-500" id="admin-revenue-today">-</div>
+                    <div class="text-[11px] text-slate-400 mt-1">รายได้โดยประมาณ (฿)</div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="text-2xl font-black text-orange-400" id="admin-peak-hour">-</div>
+                    <div class="text-[11px] text-slate-400 mt-1">ชั่วโมงคนแน่น</div>
+                </div>
+            </div>
+
+            <!-- 3. แผนภูมิชั่วโมง -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงที่มีคนใช้บริการมากที่สุด (วันนี้)</div>
+                <div class="flex items-end gap-[2px] px-1 min-h-[80px]" id="peak-hour-chart" style="align-items:flex-end">
+                    <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                </div>
+                <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1" id="peak-hour-labels"></div>
+            </div>
+
+            <!-- 4. เครื่องยอดนิยม -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">🏆 เครื่องยอดนิยม (วันนี้)</div>
+                <div id="machine-usage-list" class="space-y-2">
+                    <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                </div>
+            </div>
+
+            <!-- 5. วันที่คนมาใช้บริการเยอะสุด -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📅 วันที่คนมาใช้บริการเยอะสุด (7 วันล่าสุด)</div>
+                <div class="flex items-end gap-1 px-1 min-h-[60px]" id="peak-day-chart" style="align-items:flex-end">
+                    <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                </div>
+            </div>
+
+            <!-- 6. จัดการผู้ดูแลระบบ (5 slots) -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200">👤 ผู้ดูแลระบบ (Admin)</div>
+                    <div class="text-[10px] text-slate-400">สูงสุด 5 คน</div>
+                </div>
+                <div id="admin-user-list" class="space-y-2 mb-3">
+                    <div class="text-xs text-slate-400">กำลังโหลด...</div>
+                </div>
+                <div id="admin-add-row" class="hidden flex gap-2 mt-2">
+                    <input id="admin-new-uid" type="text" placeholder="LINE userId (U1234...)"
+                        class="flex-1 text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600
+                               bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200
+                               focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    <button onclick="addAdminUser()"
+                        class="px-3 py-2 rounded-xl text-xs font-bold bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all">
+                        เพิ่ม
+                    </button>
+                    <button onclick="document.getElementById('admin-add-row').classList.add('hidden')"
+                        class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                        ยกเลิก
+                    </button>
+                </div>
+                <button id="admin-add-btn" onclick="showAddAdminRow()"
+                    class="w-full mt-2 py-2 rounded-xl text-xs font-bold border border-dashed border-slate-300 dark:border-slate-600
+                           text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all">
+                    + เพิ่ม Admin
+                </button>
+            </div>
+
+        </div>
+
+        <!-- 7. เครื่องซักผ้า (Washer) — แสดงเสมอ -->
+        <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
+                <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-4" id="washer-zone">
+                <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+            </div>
+        </section>
+
+        <!-- 8. เครื่องซัก-อบ All-in-one (AQUA) — แสดงเสมอ -->
+        <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
+                <h2 class="text-lg font-bold tracking-tight">เครื่องซัก-อบ All-in-one (AQUA)</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-4" id="all-in-one-zone"></div>
+        </section>
+
+        <!-- 9. เครื่องอบผ้า (Dryer) — แสดงเสมอ -->
+        <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
+                <h2 class="text-lg font-bold tracking-tight">เครื่องอบผ้า (Dryer)</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-4" id="dryer-zone">
+                <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+            </div>
+        </section>
+
     </div>
 
 <script type="module">
@@ -300,11 +333,85 @@
         document.getElementById('view-admin').className = isAdmin
             ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
             : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
+        // แสดง/ซ่อน admin panel เท่านั้น — เครื่องทุกตัวแสดงเสมอ
         document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
-        // แสดงเครื่องทุกตัวเสมอ ไม่ว่าจะอยู่โหมดไหน
-        if (isAdmin) loadAdminStats();
+        if (isAdmin) { loadAdminStats(); loadAdminUsers(); }
         render();
     }
+
+    // ============================================================
+    // Admin Users Management — โหลด / เพิ่ม / ลบ
+    // ============================================================
+    const MAX_ADMINS = 5;
+
+    async function loadAdminUsers() {
+        const listEl = document.getElementById('admin-user-list');
+        const addBtn = document.getElementById('admin-add-btn');
+        try {
+            const snap = await get(ref(database, 'laundry_system/admin_users'));
+            const admins = snap.exists() ? Object.entries(snap.val()).filter(([,v]) => v === true) : [];
+
+            if (admins.length === 0) {
+                listEl.innerHTML = '<div class="text-xs text-slate-400 py-1">ยังไม่มีผู้ดูแลระบบครับ</div>';
+            } else {
+                listEl.innerHTML = admins.map(([uid], i) => `
+                <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                    <div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-[10px] font-black text-blue-500">${i+1}</div>
+                    <div class="flex-1 text-xs font-mono text-slate-600 dark:text-slate-300 truncate">${uid}</div>
+                    ${uid !== liffUserId ? `
+                    <button onclick="removeAdminUser('${uid}')"
+                        class="text-[10px] px-2 py-0.5 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-400 hover:bg-red-100 active:scale-95 transition-all">
+                        ลบ
+                    </button>` : `<div class="text-[10px] text-slate-300 dark:text-slate-600 px-2">คุณ</div>`}
+                </div>`).join('');
+            }
+
+            // ซ่อนปุ่มเพิ่มถ้าเต็ม 5 แล้ว
+            if (addBtn) addBtn.classList.toggle('hidden', admins.length >= MAX_ADMINS);
+        } catch(e) {
+            listEl.innerHTML = `<div class="text-xs text-red-400">❌ โหลดไม่ได้: ${e.message}</div>`;
+        }
+    }
+
+    window.showAddAdminRow = function() {
+        document.getElementById('admin-add-row').classList.remove('hidden');
+        document.getElementById('admin-add-btn').classList.add('hidden');
+        document.getElementById('admin-new-uid').focus();
+    };
+
+    window.addAdminUser = async function() {
+        const input = document.getElementById('admin-new-uid');
+        const uid = input.value.trim();
+        if (!uid || !uid.startsWith('U') || uid.length < 10) {
+            showToast('userId ต้องขึ้นต้นด้วย U และยาวพอครับ', '⚠️', 2500);
+            return;
+        }
+        try {
+            const snap = await get(ref(database, 'laundry_system/admin_users'));
+            const current = snap.exists() ? Object.entries(snap.val()).filter(([,v]) => v === true) : [];
+            if (current.length >= MAX_ADMINS) {
+                showToast(`เพิ่มได้สูงสุด ${MAX_ADMINS} คนครับ`, '🚫', 2500); return;
+            }
+            await set(ref(database, `laundry_system/admin_users/${uid}`), true);
+            input.value = '';
+            document.getElementById('admin-add-row').classList.add('hidden');
+            showToast('เพิ่ม Admin สำเร็จครับ', '✅', 2000);
+            loadAdminUsers();
+        } catch(e) {
+            showToast('เพิ่มไม่สำเร็จ: ' + e.message, '❌', 3000);
+        }
+    };
+
+    window.removeAdminUser = async function(uid) {
+        if (!confirm(`ลบ Admin\n${uid}\nออกจากระบบ?`)) return;
+        try {
+            await set(ref(database, `laundry_system/admin_users/${uid}`), null);
+            showToast('ลบ Admin สำเร็จครับ', '✅', 2000);
+            loadAdminUsers();
+        } catch(e) {
+            showToast('ลบไม่สำเร็จ: ' + e.message, '❌', 3000);
+        }
+    };
 
     async function toggleMode(admin) {
         if (!admin) { setAdminUI(false); return; }

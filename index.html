@@ -639,87 +639,57 @@
     };
 
     // ============================================================
-    // Admin Machine Card — แสดงสถานะ + ปุ่มควบคุม
+    // Admin Machine Card — ใช้ user card เหมือนกันทุกอย่าง + ปุ่มควบคุม
+    // Desktop (lg): card ซ้าย | ปุ่มขวา
+    // Mobile: card บน / ปุ่ม 4-col ล่าง
     // ============================================================
     function createAdminMachineCard(name, info) {
-        const num = name.replace(/\D/g,'');
-        const isWasher = name.startsWith('W');
-        const isAqua = name.startsWith('AQUA');
-        let displayName = isAqua ? `ซัก-อบ ${num}` : (isWasher ? `ซัก ${num}` : `อบ ${num}`);
-
-        const status = info?.status?.toLowerCase() || 'offline';
         const isBusy = info?.finish_at && Date.parse(info.finish_at) > Date.now();
-        const effectiveStatus = isBusy ? 'busy' : status;
+        const st = info?.status?.toLowerCase() || 'offline';
+        const effectiveStatus = isBusy ? 'busy' : st;
 
-        const statusConfig = {
-            busy:         { label: 'กำลังทำงาน', color: 'text-blue-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',   dot: 'bg-blue-500' },
-            available:    { label: 'ว่างพร้อมใช้', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20', dot: 'bg-emerald-500' },
-            complete:     { label: 'ซักเสร็จแล้ว', color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', dot: 'bg-purple-500' },
-            readytostart: { label: 'Ready to Start', color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', dot: 'bg-yellow-500' },
-            partialvend:  { label: 'Partial Vend', color: 'text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', dot: 'bg-yellow-400' },
-            error:        { label: 'Error', color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20', dot: 'bg-red-500' },
-            outoforder:   { label: 'Out of Order', color: 'text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', dot: 'bg-red-400' },
-            offline:      { label: 'Offline', color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/50', dot: 'bg-slate-400' },
+        // ── Control buttons ────────────────────────────────────────
+        const btn = (action, ico, lbl, cls) =>
+            `<button id="acmd-${name}-${action}" onclick="sendCommand('${name}','${action}','${lbl}')"
+                class="flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl text-[10px] font-bold active:scale-95 transition-all ${cls}">
+                <span class="text-sm leading-none">${ico}</span>
+                <span class="leading-none">${lbl}</span>
+            </button>`;
+
+        const P='bg-blue-500 text-white',
+              D='bg-red-500/10 text-red-500 border border-red-200 dark:border-red-800',
+              W='bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800',
+              N='bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+
+        const allBtns = {
+            available:    [btn('start','▶','Start',P),   btn('remote_vend','💰','Vend',N), btn('clear_partial','🧹','Clear',N), btn('out_of_order','🚫','OOO',D)],
+            busy:         [btn('pause','⏸','Pause',W),   btn('stop','⏹','Stop',D),          btn('rapid_advance','⚡','Rapid',N), btn('rapid_advance_next','⏭','Next',N)],
+            readytostart: [btn('start','▶','Start',P),   btn('clear_errors','🔄','Clear',N), btn('rapid_advance','⚡','Rapid',N), btn('out_of_order','🚫','OOO',D)],
+            partialvend:  [btn('clear_partial','🧹','Clear',W), btn('start','▶','Start',P), btn('rapid_advance','⚡','Rapid',N), btn('out_of_order','🚫','OOO',D)],
+            complete:     [btn('clear_errors','🔄','Reset',N), btn('out_of_order','🚫','OOO',D)],
+            error:        [btn('clear_errors','🔄','Clear',W), btn('out_of_order','🚫','OOO',D)],
+            outoforder:   [btn('clear_errors','🔄','Clear',W), btn('out_of_order','🚫','OOO',D)],
         };
-        const sc = statusConfig[effectiveStatus] || statusConfig.offline;
+        const ctrlBtns = (allBtns[effectiveStatus] || [btn('clear_errors','🔄','Clear',N), btn('out_of_order','🚫','OOO',D)]).join('');
 
-        // Timer
-        let timerStr = '';
-        if (isBusy) {
-            const rem = Date.parse(info.finish_at) - Date.now();
-            const m = Math.floor(rem / 60000);
-            const s = Math.floor((rem % 60000) / 1000);
-            timerStr = `<div id="admin-timer-${name}" class="text-lg font-black ${sc.color} text-center my-1">${m}:${String(s).padStart(2,'0')}</div>`;
-        }
+        // ── Machine card (clone from user, prefix IDs ไม่ให้ซ้ำ) ──
+        let cardHTML = createMachineHTML(name, info);
+        cardHTML = cardHTML
+            .replace(/id="timer-/g, 'id="atimer-')
+            .replace(/id="circle-/g, 'id="acircle-');
 
-        // Price badge
-        const price = info?.price > 0 ? `<span class="text-[10px] font-bold ${sc.color}">฿${info.price}</span>` : '';
-        const subs = info?.subscriber_count > 0 ? `<span class="text-[9px] text-slate-400">🔔${info.subscriber_count}</span>` : '';
-
-        // Control buttons per status
-        const btn = (action, label, style = 'default') => {
-            const styles = {
-                primary:  'bg-blue-500 text-white hover:bg-blue-600',
-                danger:   'bg-red-500/10 dark:bg-red-900/30 text-red-500 border border-red-300 dark:border-red-700',
-                warn:     'bg-yellow-500/10 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-700',
-                default:  'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
-            };
-            return `<button id="cmd-${name}-${action}" onclick="sendCommand('${name}','${action}','${label}')"
-                class="py-2 px-1 rounded-xl text-[11px] font-bold ${styles[style]} active:scale-95 transition-all text-center">${label}</button>`;
-        };
-
-        let controls = '';
-        if (effectiveStatus === 'available') {
-            controls = btn('start','▶ Start','primary') + btn('remote_vend','💰 Vend') + btn('clear_partial','🧹 Clear') + btn('out_of_order','🚫 OOO','danger');
-        } else if (effectiveStatus === 'busy') {
-            controls = btn('pause','⏸ Pause','warn') + btn('stop','⏹ Stop','danger') + btn('rapid_advance','⚡ Rapid') + btn('rapid_advance_next','⏭ Next');
-        } else if (effectiveStatus === 'readytostart') {
-            controls = btn('start','▶ Start','primary') + btn('clear_errors','🔄 Clear') + btn('rapid_advance','⚡ Rapid') + btn('out_of_order','🚫 OOO','danger');
-        } else if (effectiveStatus === 'partialvend') {
-            controls = btn('clear_partial','🧹 Clear','warn') + btn('start','▶ Start','primary') + btn('rapid_advance','⚡ Rapid') + btn('out_of_order','🚫 OOO','danger');
-        } else if (effectiveStatus === 'complete') {
-            controls = btn('clear_errors','🔄 Reset') + btn('out_of_order','🚫 OOO','danger');
-        } else if (effectiveStatus === 'error' || effectiveStatus === 'outoforder') {
-            controls = btn('clear_errors','🔄 Clear','warn') + btn('out_of_order','🚫 OOO','danger');
-        } else {
-            controls = btn('clear_errors','🔄 Clear') + btn('out_of_order','🚫 OOO','danger');
-        }
-
-        return `<div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-black text-slate-700 dark:text-slate-200">${displayName}</span>
-                <div class="flex items-center gap-1.5">
-                    ${price}
-                    ${subs}
-                    <div class="flex items-center gap-1 ${sc.bg} px-2 py-0.5 rounded-full">
-                        <span class="w-2 h-2 rounded-full ${sc.dot} flex-shrink-0"></span>
-                        <span class="text-[10px] font-bold ${sc.color}">${sc.label}</span>
-                    </div>
-                </div>
+        // ── Layout: flex-col (mobile) → flex-row (desktop) ────────
+        return `
+        <div class="flex flex-col lg:flex-row gap-2 items-stretch">
+            <div class="flex-1 min-w-0">${cardHTML}</div>
+            <div class="grid grid-cols-4 lg:grid-cols-1 gap-1.5 p-1.5
+                        bg-white dark:bg-slate-800 rounded-2xl
+                        border border-slate-100 dark:border-slate-700 shadow-sm
+                        lg:w-[80px] lg:flex-shrink-0">
+                ${ctrlBtns}
             </div>
-            ${timerStr}
-            <div class="grid grid-cols-2 gap-2 mt-2">${controls}</div>
         </div>`;
+    }
     }
 
     // ============================================================
@@ -1109,27 +1079,29 @@ function createMachineHTML(name, info) {
             const info = currentData[name];
             if (!info || !info.finish_at) return;
             const remaining = Date.parse(info.finish_at) - Date.now();
-            const timerEl = document.getElementById('timer-' + name);
-            const circleEl = document.getElementById('circle-' + name);
-            if (!timerEl) return;
 
-            const isWasher = name.startsWith('W');
             const radius = 28;
             const circ = 2 * Math.PI * radius;
 
-            if (remaining > 0) {
-                const m = Math.floor(remaining / 60000);
-                const s = Math.floor((remaining % 60000) / 1000);
-                timerEl.textContent = m + ':' + String(s).padStart(2, '0');
-                if (circleEl) {
-                    const offset = circ * (1 - (1 - (remaining / (30 * 60000))));
-                    circleEl.style.strokeDashoffset = Math.max(0, offset);
-                }
-            } else {
-                // countdown ถึง 0 → แสดง DONE รอ Firebase อัปเดต
-                if (info.status?.toLowerCase() === 'busy') {
-                    timerEl.textContent = 'DONE';
-                    if (circleEl) circleEl.style.strokeDashoffset = 0;
+            // อัปเดตทั้ง user timer และ admin timer (atimer-)
+            for (const prefix of ['timer-', 'atimer-']) {
+                const timerEl = document.getElementById(prefix + name);
+                const circleEl = document.getElementById((prefix === 'timer-' ? 'circle-' : 'acircle-') + name);
+                if (!timerEl) continue;
+
+                if (remaining > 0) {
+                    const m = Math.floor(remaining / 60000);
+                    const s = Math.floor((remaining % 60000) / 1000);
+                    timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+                    if (circleEl) {
+                        const offset = circ * (1 - (1 - (remaining / (30 * 60000))));
+                        circleEl.style.strokeDashoffset = Math.max(0, offset);
+                    }
+                } else {
+                    if (info.status?.toLowerCase() === 'busy') {
+                        timerEl.textContent = 'DONE';
+                        if (circleEl) circleEl.style.strokeDashoffset = 0;
+                    }
                 }
             }
         });

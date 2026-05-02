@@ -112,7 +112,7 @@
                     </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงยอดนิยม (วันนี้)</div>
+                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงที่มีคนใช้บริการมากที่สุด (วันนี้)</div>
                     <div class="flex items-end gap-[3px] h-28 px-1" id="peak-hour-chart">
                         <div class="text-xs text-slate-400">กำลังโหลด...</div>
                     </div>
@@ -409,8 +409,12 @@
             }).join('');
 
         } catch(e) {
-            console.error('Admin stats error:', e);
+            console.error('Admin stats error:', e.code, e.message);
             document.getElementById('admin-total-today').innerText = 'N/A';
+            document.getElementById('admin-revenue-today').innerText = 'N/A';
+            document.getElementById('admin-peak-hour').innerText = 'N/A';
+            document.getElementById('machine-usage-list').innerHTML =
+                `<div class="text-xs text-red-400">❌ โหลดไม่ได้: ${e.message}</div>`;
         }
     }
 
@@ -543,6 +547,9 @@ function createMachineHTML(name, info) {
         } else if (isAqua) {
             if (num === "9") capacityText = "17KG";
             else if (num === "10") capacityText = "27KG";
+        } else {
+            // Dryer D5-D8 → 14KG
+            capacityText = machineCapacities[name] || "14KG";
         }
         
         let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);
@@ -564,6 +571,7 @@ function createMachineHTML(name, info) {
             if (status === 'error' || status === 'outoforder') return 'red-500';
             if (status === 'unavailable') return 'slate-400';
             if (status === 'readytostart') return 'yellow-500';
+            if (status === 'partialvend') return 'yellow-400';
             return 'emerald-500';
         };
 
@@ -610,6 +618,7 @@ function createMachineHTML(name, info) {
                                     if (st === 'error') return '⚠️';
                                     if (st === 'outoforder' || st === 'unavailable') return '🚫';
                                     if (st === 'readytostart') return '👆';
+                                    if (st === 'partialvend') return '🪙';
                                     return 'READY';
                                 })() )}
                         </div>
@@ -622,6 +631,7 @@ function createMachineHTML(name, info) {
                             if (st === 'outoforder') return '🚫 Out of order';
                             if (st === 'unavailable') return '🚫 Out of order';
                             if (st === 'readytostart') return '👆 กรุณากดปุ่ม START ที่หน้าเครื่อง';
+                            if (st === 'partialvend') return '🪙 กรุณาหยอดเหรียญให้ครบตามจำนวน';
                             return 'ว่างพร้อมใช้';
                         })()) )}
                     </div>

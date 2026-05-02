@@ -56,6 +56,7 @@
                     <button id="view-user" class="px-3 py-1 rounded-md text-[11px] font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400">USER</button>
                     <button id="view-admin" class="px-3 py-1 rounded-md text-[11px] font-bold transition-all text-slate-500 dark:text-slate-400">ADMIN</button>
                 </div>
+                <button id="admin-logout-btn" onclick="adminLogout()" class="hidden px-2 py-1 rounded-lg text-[10px] font-bold bg-red-50 dark:bg-red-900/30 text-red-400 border border-red-200 dark:border-red-700 hover:bg-red-100 active:scale-95 transition-all">ออก</button>
             </div>
         </div>
         <!-- แถวที่ 2: ภาพรวมระบบ -->
@@ -361,7 +362,11 @@
     }
     updateThemeIcons();
 
-    document.getElementById('view-user').onclick = () => toggleMode(false);
+    // ── Admin session: จำ login ไว้ใน sessionStorage ──
+    const _adminAuthed = sessionStorage.getItem('admin_authed') === '1';
+    if (_adminAuthed) setAdminUI(true);  // restore ทันที ไม่ต้อง login ซ้ำ
+
+    document.getElementById('view-user').onclick  = () => toggleMode(false);
     document.getElementById('view-admin').onclick = () => toggleMode(true);
 
     function setAdminUI(isAdmin) {
@@ -369,23 +374,34 @@
         const btnCls = (active) => active
             ? "px-3 py-1 rounded-md text-[11px] font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
             : "px-3 py-1 rounded-md text-[11px] font-bold transition-all text-slate-500 dark:text-slate-400";
-        document.getElementById('view-user').className = btnCls(!isAdmin);
+        document.getElementById('view-user').className  = btnCls(!isAdmin);
         document.getElementById('view-admin').className = btnCls(isAdmin);
         document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
         document.getElementById('user-machines').classList.toggle('hidden', isAdmin);
+        // แสดง/ซ่อน logout button
+        const logoutBtn = document.getElementById('admin-logout-btn');
+        if (logoutBtn) logoutBtn.classList.toggle('hidden', !isAdmin);
         if (isAdmin) { loadAdminStats(); loadAdminUsers(); }
         render();
     }
 
+    // ── Logout function ──
+    window.adminLogout = function() {
+        sessionStorage.removeItem('admin_authed');
+        setAdminUI(false);
+        showToast('ออกจากระบบ Admin แล้วครับ', '👋', 2000);
+    };
+
     async function toggleMode(admin) {
         if (!admin) { setAdminUI(false); return; }
 
-        // มี LINE userId → ตรวจสอบผ่าน Firebase admin_users
+        // มี LINE userId → ตรวจสอบผ่าน Firebase
         if (liffUserId) {
             try {
                 const snap = await get(ref(database, `laundry_system/admin_users/${liffUserId}`));
                 const val = snap.exists() ? snap.val() : null;
                 if (val === true || (typeof val === 'object' && val?.active !== false)) {
+                    sessionStorage.setItem('admin_authed', '1');
                     setAdminUI(true);
                 } else {
                     showToast('ไม่มีสิทธิ์เข้าถึง Admin ครับ', '🚫', 3000);
@@ -396,7 +412,13 @@
             return;
         }
 
-        // ไม่มี LINE (เปิดจาก PC browser) → แสดง password modal
+        // PC browser: ถ้า authed แล้วไม่ต้อง login อีก
+        if (sessionStorage.getItem('admin_authed') === '1') {
+            setAdminUI(true);
+            return;
+        }
+
+        // แสดง password modal
         const modal = document.getElementById('admin-pwd-modal');
         const errEl = document.getElementById('admin-pwd-error');
         const inp   = document.getElementById('admin-pwd-input');
@@ -407,14 +429,15 @@
     }
 
     window.submitAdminPassword = async function() {
-        const inp    = document.getElementById('admin-pwd-input');
-        const errEl  = document.getElementById('admin-pwd-error');
-        const pwd    = inp.value.trim();
+        const inp   = document.getElementById('admin-pwd-input');
+        const errEl = document.getElementById('admin-pwd-error');
+        const pwd   = inp.value.trim();
         if (!pwd) return;
         try {
             const snap = await get(ref(database, 'laundry_system/admin_password'));
             if (snap.exists() && snap.val() === pwd) {
                 document.getElementById('admin-pwd-modal').classList.add('hidden');
+                sessionStorage.setItem('admin_authed', '1');
                 setAdminUI(true);
             } else {
                 errEl.classList.remove('hidden');
@@ -425,6 +448,47 @@
             errEl.textContent = 'เชื่อมต่อ Firebase ไม่ได้ครับ';
             errEl.classList.remove('hidden');
         }
+    };
+
+    // ── ฟัง Firebase commands node เพื่อ disable/enable ปุ่มอัตโนมัติ ──
+    onValue(ref(database, 'laundry_system/commands'), (snap) => {
+        const cmds = snap.exists() ? snap.val() : {};
+        // reset ทุกปุ่มก่อน
+        document.querySelectorAll('[id^="acmd-"]').forEach(btn => {
+            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+            btn.disabled = false;
+            btn.textContent = btn.dataset.originalText;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        });
+        // disable ปุ่มของเครื่องที่ pending/executing
+        Object.entries(cmds).forEach(([machineId, cmd]) => {
+            if (typeof cmd === 'object' && ['pending','executing'].includes(cmd?.status)) {
+                document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
+                    btn.disabled = true;
+                    btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                });
+            }
+        });
+    });
+
+    // ── Custom Confirm Modal (แทน window.confirm ที่ถูก block บน PC) ──
+    window._confirmResolve = null;
+    window.showConfirmModal = function(title, body) {
+        return new Promise(resolve => {
+            window._confirmResolve = resolve;
+            document.getElementById('confirm-modal-title').textContent = title;
+            document.getElementById('confirm-modal-body').textContent = body;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        });
+    };
+    window.confirmModalOK = function() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        if (window._confirmResolve) window._confirmResolve(true);
+    };
+    window.confirmModalCancel = function() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        if (window._confirmResolve) window._confirmResolve(false);
     };
 
     // ============================================================
@@ -616,27 +680,30 @@
     // Machine Command — เขียนคำสั่งลง Firebase ให้ scraper execute
     // ============================================================
     window.sendCommand = async function(machineId, action, label) {
-        // ── Confirm ก่อนส่งคำสั่งทุกครั้ง ──
         const num = machineId.replace(/\D/g, '');
         const displayName = machineId.startsWith('W') ? `เครื่องซัก ${num}` :
                             machineId.startsWith('D') ? `เครื่องอบ ${num}` : machineId;
-        if (!confirm(`ยืนยันการสั่งงาน\n\nเครื่อง: ${displayName}\nคำสั่ง: ${label}\n\nกด OK เพื่อยืนยัน`)) return;
+
+        // ใช้ custom modal แทน window.confirm (ใช้ได้ทั้ง PC + มือถือ)
+        const confirmed = await window.showConfirmModal(
+            'ยืนยันการสั่งงาน',
+            `เครื่อง: ${displayName}\nคำสั่ง: ${label}`
+        );
+        if (!confirmed) return;
 
         const btnId = `acmd-${machineId}-${action}`;
         const btn = document.getElementById(btnId);
-        if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+        if (btn) { btn.disabled = true; btn.textContent = '⏳'; btn.classList.add('opacity-50'); }
         try {
             await set(ref(database, `laundry_system/commands/${machineId}`), {
-                action,
-                status: 'pending',
+                action, status: 'pending',
                 requested_at: new Date().toISOString(),
                 requested_by: liffUserId || 'admin'
             });
             showToast(`${label} → ${displayName} ส่งคำสั่งแล้วครับ`, '✅', 3000);
-            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = label; } }, 8000);
         } catch(e) {
             showToast('ส่งคำสั่งไม่ได้: ' + e.message, '❌', 3000);
-            if (btn) { btn.disabled = false; btn.textContent = label; }
+            if (btn) { btn.disabled = false; btn.textContent = label; btn.classList.remove('opacity-50'); }
         }
     };
 
@@ -1187,6 +1254,24 @@ function createMachineHTML(name, info) {
                 <button onclick="submitAdminPassword()"
                     class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all">
                     เข้าสู่ระบบ
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-6" style="background:rgba(0,0,0,0.65)">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-xs shadow-2xl">
+            <div class="text-2xl mb-1 text-center">⚠️</div>
+            <h3 id="confirm-modal-title" class="text-base font-bold text-slate-800 dark:text-white mb-2 text-center"></h3>
+            <p id="confirm-modal-body" class="text-sm text-slate-500 dark:text-slate-400 text-center mb-5 whitespace-pre-line"></p>
+            <div class="flex gap-3">
+                <button onclick="confirmModalCancel()"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-bold border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
+                    ยกเลิก
+                </button>
+                <button onclick="confirmModalOK()"
+                    class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all">
+                    ยืนยัน
                 </button>
             </div>
         </div>

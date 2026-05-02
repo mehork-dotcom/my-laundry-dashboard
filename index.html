@@ -168,21 +168,33 @@
                 </div>
             </div>
 
-            <!-- ── Machine Control: 3 cols always ── -->
+            <!-- ── Machine Control: 1 col mobile → 3 cols desktop ── -->
             <div>
                 <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">🎛️ สั่งงานเครื่อง</div>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <!-- Washer Column -->
                     <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1"><span class="text-blue-500 text-sm">🌀</span><h3 class="text-xs font-black text-slate-600 dark:text-slate-300">เครื่องซัก</h3></div>
-                        <div id="admin-washer-zone" class="space-y-2"></div>
+                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                            <span class="text-blue-500 text-base">🌀</span>
+                            <h3 class="text-xs font-black text-blue-600 dark:text-blue-400">เครื่องซักผ้า (Washer)</h3>
+                        </div>
+                        <div id="admin-washer-zone" class="space-y-3"></div>
                     </div>
+                    <!-- AQUA Column -->
                     <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1"><span class="text-purple-500 text-sm">✨</span><h3 class="text-xs font-black text-slate-600 dark:text-slate-300">เครื่องซัก-อบ</h3></div>
-                        <div id="admin-aqua-zone" class="space-y-2"></div>
+                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                            <span class="text-purple-500 text-base">✨</span>
+                            <h3 class="text-xs font-black text-purple-600 dark:text-purple-400">เครื่องซัก-อบ (AQUA)</h3>
+                        </div>
+                        <div id="admin-aqua-zone" class="space-y-3"></div>
                     </div>
+                    <!-- Dryer Column -->
                     <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1"><span class="text-orange-500 text-sm">🔥</span><h3 class="text-xs font-black text-slate-600 dark:text-slate-300">เครื่องอบ</h3></div>
-                        <div id="admin-dryer-zone" class="space-y-2"></div>
+                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
+                            <span class="text-orange-500 text-base">🔥</span>
+                            <h3 class="text-xs font-black text-orange-600 dark:text-orange-400">เครื่องอบผ้า (Dryer)</h3>
+                        </div>
+                        <div id="admin-dryer-zone" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
@@ -668,12 +680,12 @@
         const btn = (action, label, style = 'default') => {
             const styles = {
                 primary:  'bg-blue-500 text-white hover:bg-blue-600',
-                danger:   'bg-red-50 dark:bg-red-900/30 text-red-500 border border-red-200 dark:border-red-700',
-                warn:     'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 border border-yellow-200 dark:border-yellow-700',
+                danger:   'bg-red-500/10 dark:bg-red-900/30 text-red-500 border border-red-300 dark:border-red-700',
+                warn:     'bg-yellow-500/10 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-700',
                 default:  'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
             };
             return `<button id="cmd-${name}-${action}" onclick="sendCommand('${name}','${action}','${label}')"
-                class="px-1.5 py-1 rounded-lg text-[10px] font-bold ${styles[style]} active:scale-95 transition-all">${label}</button>`;
+                class="py-2 px-1 rounded-xl text-[11px] font-bold ${styles[style]} active:scale-95 transition-all text-center">${label}</button>`;
         };
 
         let controls = '';
@@ -682,28 +694,31 @@
         } else if (effectiveStatus === 'busy') {
             controls = btn('pause','⏸ Pause','warn') + btn('stop','⏹ Stop','danger') + btn('rapid_advance','⚡ Rapid') + btn('rapid_advance_next','⏭ Next');
         } else if (effectiveStatus === 'readytostart') {
-            controls = btn('start','▶ Start','primary') + btn('rapid_advance','⚡ Rapid') + btn('clear_errors','🔄 Clear') + btn('out_of_order','🚫 OOO','danger');
+            controls = btn('start','▶ Start','primary') + btn('clear_errors','🔄 Clear') + btn('rapid_advance','⚡ Rapid') + btn('out_of_order','🚫 OOO','danger');
         } else if (effectiveStatus === 'partialvend') {
-            controls = btn('clear_partial','🧹 Clear Partial','warn') + btn('start','▶ Start','primary') + btn('rapid_advance','⚡ Rapid') + btn('out_of_order','🚫 OOO','danger');
+            controls = btn('clear_partial','🧹 Clear','warn') + btn('start','▶ Start','primary') + btn('rapid_advance','⚡ Rapid') + btn('out_of_order','🚫 OOO','danger');
         } else if (effectiveStatus === 'complete') {
             controls = btn('clear_errors','🔄 Reset') + btn('out_of_order','🚫 OOO','danger');
         } else if (effectiveStatus === 'error' || effectiveStatus === 'outoforder') {
-            controls = btn('clear_errors','🔄 Clear Error','warn') + btn('out_of_order','🚫 OOO','danger');
+            controls = btn('clear_errors','🔄 Clear','warn') + btn('out_of_order','🚫 OOO','danger');
+        } else {
+            controls = btn('clear_errors','🔄 Clear') + btn('out_of_order','🚫 OOO','danger');
         }
 
-        return `<div class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-slate-100 dark:border-slate-700">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-black text-slate-700 dark:text-slate-200">${displayName}</span>
-                <div class="flex items-center gap-1">
-                    ${price} ${subs}
-                    <div class="flex items-center gap-1 ${sc.bg} px-1.5 py-0.5 rounded-full">
-                        <span class="w-1.5 h-1.5 rounded-full ${sc.dot} flex-shrink-0"></span>
-                        <span class="text-[9px] font-bold ${sc.color}">${sc.label}</span>
+        return `<div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-black text-slate-700 dark:text-slate-200">${displayName}</span>
+                <div class="flex items-center gap-1.5">
+                    ${price}
+                    ${subs}
+                    <div class="flex items-center gap-1 ${sc.bg} px-2 py-0.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full ${sc.dot} flex-shrink-0"></span>
+                        <span class="text-[10px] font-bold ${sc.color}">${sc.label}</span>
                     </div>
                 </div>
             </div>
             ${timerStr}
-            <div class="grid grid-cols-2 gap-1 mt-2">${controls}</div>
+            <div class="grid grid-cols-2 gap-2 mt-2">${controls}</div>
         </div>`;
     }
 

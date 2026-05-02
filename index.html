@@ -113,7 +113,7 @@
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📊 ชั่วโมงที่มีคนใช้บริการมากที่สุด (วันนี้)</div>
-                    <div class="flex items-end gap-[3px] h-28 px-1" id="peak-hour-chart">
+                    <div class="flex items-end gap-[2px] px-1 min-h-[80px]" id="peak-hour-chart" style="align-items:flex-end">
                         <div class="text-xs text-slate-400">กำลังโหลด...</div>
                     </div>
                     <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1" id="peak-hour-labels"></div>
@@ -126,7 +126,7 @@
                 </div>
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3">📅 วันที่คนใช้บริการมากที่สุด (7 วันล่าสุด)</div>
-                    <div class="flex items-end gap-1 h-20 px-1" id="peak-day-chart">
+                    <div class="flex items-end gap-1 px-1 min-h-[60px]" id="peak-day-chart" style="align-items:flex-end">
                         <div class="text-xs text-slate-400">กำลังโหลด...</div>
                     </div>
                     <div class="flex justify-between text-[9px] text-slate-400 mt-1 px-1">
@@ -342,71 +342,90 @@
         try {
             // โหลด history วันนี้
             const snap = await get(ref(database, `laundry_system/history/${dateStr}`));
-            const todayData = snap.exists() ? Object.values(snap.val()) : [];
+            const rawToday = snap.exists() ? snap.val() : {};
+            // รองรับทั้ง object และ array
+            const todayData = typeof rawToday === 'object' && !Array.isArray(rawToday)
+                ? Object.values(rawToday) : [];
 
             // Summary stats
             const total = todayData.length;
-            const revenue = todayData.reduce((s, r) => s + (r.price || 0), 0);
+            const revenue = todayData.reduce((s, r) => s + (Number(r.price) || 0), 0);
             document.getElementById('admin-total-today').innerText = total;
             document.getElementById('admin-revenue-today').innerText = revenue.toLocaleString();
 
             // Peak Hour
             const hourCounts = Array(24).fill(0);
             todayData.forEach(r => { if (r.hour !== undefined) hourCounts[r.hour]++; });
-            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
-            document.getElementById('admin-peak-hour').innerText = total > 0 ? `${peakHour}:00` : '-';
+            const maxHour = Math.max(...hourCounts);
+            const peakHour = maxHour > 0 ? hourCounts.indexOf(maxHour) : -1;
+            document.getElementById('admin-peak-hour').innerText = peakHour >= 0 ? `${peakHour}:00` : '-';
 
-            // Peak Hour Chart (แสดงชั่วโมง 6-22)
+            // Peak Hour Chart (ชั่วโมง 6-22)
             const displayHours = Array.from({length: 17}, (_, i) => i + 6);
             const maxCount = Math.max(...displayHours.map(h => hourCounts[h]), 1);
             const chartEl = document.getElementById('peak-hour-chart');
             const labelsEl = document.getElementById('peak-hour-labels');
-            chartEl.innerHTML = displayHours.map(h => {
-                const count = hourCounts[h];
-                const pct = Math.round((count / maxCount) * 100);
-                const isPeak = h === peakHour && total > 0;
-                return `<div class="flex-1 flex flex-col items-center gap-1">
-                    <div class="text-[9px] text-slate-400">${count || ''}</div>
-                    <div class="w-full rounded-t-sm transition-all" style="height:${Math.max(pct, 2)}%;background:${isPeak ? '#f97316' : '#3b82f6'}44;border-top:2px solid ${isPeak ? '#f97316' : '#3b82f680'}"></div>
-                </div>`;
-            }).join('');
-            labelsEl.innerHTML = displayHours.filter((_, i) => i % 3 === 0).map(h => `<span>${h}</span>`).join('');
+
+            if (total === 0) {
+                chartEl.innerHTML = '<div class="w-full text-center text-xs text-slate-400 py-4">ยังไม่มีข้อมูลวันนี้<br><span class="text-[10px]">ข้อมูลจะแสดงหลังจากมีการใช้เครื่องครับ</span></div>';
+            } else {
+                chartEl.innerHTML = displayHours.map(h => {
+                    const count = hourCounts[h];
+                    const pct = Math.max(Math.round((count / maxCount) * 96), 2);
+                    const isPeak = h === peakHour;
+                    const color = isPeak ? '#f97316' : '#3b82f6';
+                    return `<div class="flex-1 flex flex-col items-center" style="min-width:0">
+                        <div class="text-[8px] text-slate-400 mb-0.5">${count || ''}</div>
+                        <div class="w-full rounded-t" style="height:${pct}px;background:${color}55;border-top:2px solid ${color}"></div>
+                    </div>`;
+                }).join('');
+                labelsEl.innerHTML = displayHours.filter((_, i) => i % 3 === 0).map(h => `<span>${h}</span>`).join('');
+            }
 
             // Machine Usage
             const machineCount = {};
-            todayData.forEach(r => { machineCount[r.machine_id] = (machineCount[r.machine_id] || 0) + 1; });
+            todayData.forEach(r => { if (r.machine_id) machineCount[r.machine_id] = (machineCount[r.machine_id] || 0) + 1; });
             const sorted = Object.entries(machineCount).sort((a, b) => b[1] - a[1]);
             const maxM = sorted[0]?.[1] || 1;
             const NAMES = {'W1':'เครื่องซัก 1','W2':'เครื่องซัก 2','W3':'เครื่องซัก 3','W4':'เครื่องซัก 4','D5':'เครื่องอบ 5','D6':'เครื่องอบ 6','D7':'เครื่องอบ 7','D8':'เครื่องอบ 8'};
-            document.getElementById('machine-usage-list').innerHTML = sorted.length ? sorted.map(([id, cnt], i) => `
+            document.getElementById('machine-usage-list').innerHTML = sorted.length
+                ? sorted.map(([id, cnt], i) => `
                 <div class="flex items-center gap-2">
                     <div class="text-xs text-slate-400 w-4">${i+1}</div>
-                    <div class="text-xs font-medium text-slate-700 dark:text-slate-200 w-20">${NAMES[id] || id}</div>
+                    <div class="text-xs font-medium text-slate-700 dark:text-slate-200 w-20 truncate">${NAMES[id] || id}</div>
                     <div class="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full h-2">
                         <div class="h-2 rounded-full bg-blue-400" style="width:${Math.round(cnt/maxM*100)}%"></div>
                     </div>
-                    <div class="text-xs font-bold text-slate-500 w-6 text-right">${cnt}</div>
-                </div>`).join('') : '<div class="text-xs text-slate-400">ยังไม่มีข้อมูลวันนี้</div>';
+                    <div class="text-xs font-bold text-blue-500 w-6 text-right">${cnt}</div>
+                </div>`).join('')
+                : '<div class="text-xs text-slate-400 py-2">ยังไม่มีข้อมูลวันนี้</div>';
 
             // Day of Week (7 วันล่าสุด)
             const dayCounts = Array(7).fill(0);
             const snapAll = await get(ref(database, 'laundry_system/history'));
             if (snapAll.exists()) {
                 Object.values(snapAll.val()).forEach(dayData => {
+                    if (typeof dayData !== 'object') return;
                     Object.values(dayData).forEach(r => {
-                        if (r.day_of_week !== undefined) dayCounts[r.day_of_week]++;
+                        if (r && r.day_of_week !== undefined) dayCounts[r.day_of_week]++;
                     });
                 });
             }
             const maxD = Math.max(...dayCounts, 1);
+            const dayNames = ['จ','อ','พ','พฤ','ศ','ส','อา'];
             document.getElementById('peak-day-chart').innerHTML = dayCounts.map((cnt, d) => {
-                const pct = Math.round((cnt / maxD) * 100);
-                const isToday = d === localDate.getDay() === 0 ? 6 : localDate.getDay() - 1;
-                return `<div class="flex-1 flex flex-col items-center gap-1">
-                    <div class="text-[9px] text-slate-400">${cnt || ''}</div>
-                    <div class="w-full rounded-t-sm" style="height:${Math.max(pct, 4)}%;background:#a855f744;border-top:2px solid #a855f780"></div>
+                const pct = Math.max(Math.round((cnt / maxD) * 64), 3);
+                const isToday = d === ((new Date().getDay() + 6) % 7);
+                const color = isToday ? '#a855f7' : '#8b5cf6';
+                return `<div class="flex-1 flex flex-col items-center" style="min-width:0">
+                    <div class="text-[8px] text-slate-400 mb-0.5">${cnt || ''}</div>
+                    <div class="w-full rounded-t" style="height:${pct}px;background:${color}55;border-top:2px solid ${color}80"></div>
+                    <div class="text-[9px] text-slate-400 mt-1">${dayNames[d]}</div>
                 </div>`;
             }).join('');
+            // ลบ label row เดิม (ย้ายเข้าใน chart แล้ว)
+            const oldLabels = document.querySelector('.flex.justify-between.text-\\[9px\\].text-slate-400.mt-1.px-1');
+            if (oldLabels) oldLabels.style.display = 'none';
 
         } catch(e) {
             console.error('Admin stats error:', e.code, e.message);
@@ -415,6 +434,8 @@
             document.getElementById('admin-peak-hour').innerText = 'N/A';
             document.getElementById('machine-usage-list').innerHTML =
                 `<div class="text-xs text-red-400">❌ โหลดไม่ได้: ${e.message}</div>`;
+            document.getElementById('peak-hour-chart').innerHTML =
+                `<div class="text-xs text-red-400 p-2">❌ ${e.message}</div>`;
         }
     }
 

@@ -83,6 +83,7 @@
         </aside>
 
         <div class="lg:col-span-9 space-y-6">
+            <div id="user-content">
             <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                 <div class="flex items-center gap-2 mb-6">
                     <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
@@ -154,6 +155,7 @@
                     </div>
                 </section>
             </div>
+            </div><!-- /user-content -->
         </div>
     </div>
 
@@ -264,12 +266,9 @@
 
     // ข้อมูลความจุเครื่องตามที่ระบุ
     const machineCapacities = {
-        'W1': '15KG', 
-        'W2': '15KG', 
-        'W3': '15KG', 
-        'W4': '10KG',
-        'AQUA9': '17KG', 
-        'AQUA10': '27KG'
+        'W1': '15KG', 'W2': '15KG', 'W3': '15KG', 'W4': '10KG',
+        'D5': '14KG', 'D6': '14KG', 'D7': '14KG', 'D8': '14KG',
+        'AQUA9': '17KG', 'AQUA10': '27KG'
     };
 
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -302,8 +301,9 @@
             ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
             : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
         document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
-        const userPanel = document.getElementById('user-panel-aqua-dryer');
-        if (userPanel) userPanel.classList.toggle('hidden', isAdmin);
+        // ซ่อน/แสดง user content ทั้งหมด (washer + AQUA + dryer)
+        const userContent = document.getElementById('user-content');
+        if (userContent) userContent.classList.toggle('hidden', isAdmin);
         if (isAdmin) loadAdminStats();
         render();
     }
@@ -589,7 +589,7 @@ function createMachineHTML(name, info) {
                     
                     <div class="flex items-center gap-1.5 mb-2">
                         ${capacityText ? `<div class="text-[12px] font-black text-${themeColor} tracking-widest px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">${capacityText}</div>` : '<div class="h-[26px]"></div>'}
-                        ${(info && info.price > 0) ? `<div class="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800">฿${info.price}</div>` : ''}
+                        ${(info && info.price > 0) ? `<div class="text-[11px] font-bold text-${themeColor} px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">฿${info.price}</div>` : ''}
                     </div>
                     
                     <div class="relative ${svgSize} mb-2">
@@ -605,11 +605,11 @@ function createMachineHTML(name, info) {
                                 `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
                                 (() => {
                                     const st = info.status?.toLowerCase();
-                                    if (isUpdating || st === 'busy') return 'DONE';
-                                    if (st === 'complete') return 'DONE';
-                                    if (st === 'error') return 'ERR';
-                                    if (st === 'outoforder' || st === 'unavailable') return 'OFF';
-                                    if (st === 'readytostart') return 'START';
+                                    if (isUpdating || st === 'busy') return '✨';
+                                    if (st === 'complete') return '✨';
+                                    if (st === 'error') return '⚠️';
+                                    if (st === 'outoforder' || st === 'unavailable') return '🚫';
+                                    if (st === 'readytostart') return '👆';
                                     return 'READY';
                                 })() )}
                         </div>
@@ -617,11 +617,11 @@ function createMachineHTML(name, info) {
                     <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( isBusy ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (isUpdating ? 'กำลังอัปเดต...' : (() => {
                             const st = info.status?.toLowerCase();
-                            if (st === 'complete') return 'รอนำผ้าออก';
-                            if (st === 'error') return 'เครื่อง Error';
-                            if (st === 'outoforder') return 'งดให้บริการชั่วคราว';
-                            if (st === 'unavailable') return 'งดให้บริการชั่วคราว';
-                            if (st === 'readytostart') return 'กรุณากดปุ่ม START';
+                            if (st === 'complete') return '✨ ซักเสร็จ พร้อมนำออก';
+                            if (st === 'error') return '⚠️ เครื่อง Error';
+                            if (st === 'outoforder') return '🚫 Out of order';
+                            if (st === 'unavailable') return '🚫 Out of order';
+                            if (st === 'readytostart') return '👆 กรุณากดปุ่ม START ที่หน้าเครื่อง';
                             return 'ว่างพร้อมใช้';
                         })()) )}
                     </div>

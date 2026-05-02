@@ -83,6 +83,17 @@
         </aside>
 
         <div class="lg:col-span-9 space-y-6">
+            <div id="user-content">
+            <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
+                    <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone">
+                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
+                </div>
+            </section>
 
             <!-- Admin Dashboard Panel -->
             <div id="admin-panel" class="hidden space-y-4">
@@ -122,19 +133,7 @@
                         <span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span>อา</span>
                     </div>
                 </div>
-            </div><!-- /admin-panel -->
-
-            <div id="user-content">
-            <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
-                <div class="flex items-center gap-2 mb-6">
-                    <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
-                    <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="washer-zone">
-                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                    <div class="skeleton h-48"></div><div class="skeleton h-48"></div>
-                </div>
-            </section>
+            </div>
 
             <div id="user-panel-aqua-dryer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
@@ -302,9 +301,7 @@
             ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400"
             : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400";
         document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
-        // ซ่อน/แสดง user content ทั้งหมด (washer + AQUA + dryer)
-        const userContent = document.getElementById('user-content');
-        if (userContent) userContent.classList.toggle('hidden', isAdmin);
+        // แสดงเครื่องทุกตัวเสมอ ไม่ว่าจะอยู่โหมดไหน
         if (isAdmin) loadAdminStats();
         render();
     }

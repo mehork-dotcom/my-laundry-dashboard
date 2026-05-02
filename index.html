@@ -168,34 +168,28 @@
                 </div>
             </div>
 
-            <!-- ── Machine Control: 1 col mobile → 3 cols desktop ── -->
-            <div>
-                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 px-1">🎛️ สั่งงานเครื่อง</div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <!-- Washer Column -->
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                            <span class="text-blue-500 text-base">🌀</span>
-                            <h3 class="text-xs font-black text-blue-600 dark:text-blue-400">เครื่องซักผ้า (Washer)</h3>
-                        </div>
-                        <div id="admin-washer-zone" class="space-y-3"></div>
+            <!-- ── Machine Control: same layout as user view, buttons below each card ── -->
+            <div class="max-w-2xl mx-auto space-y-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                        <span class="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
+                        <h3 class="text-sm font-bold">เครื่องซักผ้า (Washer)</h3>
                     </div>
-                    <!-- AQUA Column -->
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                            <span class="text-purple-500 text-base">✨</span>
-                            <h3 class="text-xs font-black text-purple-600 dark:text-purple-400">เครื่องซัก-อบ (AQUA)</h3>
-                        </div>
-                        <div id="admin-aqua-zone" class="space-y-3"></div>
+                    <div id="admin-washer-zone" class="grid grid-cols-2 gap-3"></div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                        <span class="p-1.5 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
+                        <h3 class="text-sm font-bold">เครื่องซัก-อบ (AQUA)</h3>
                     </div>
-                    <!-- Dryer Column -->
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                            <span class="text-orange-500 text-base">🔥</span>
-                            <h3 class="text-xs font-black text-orange-600 dark:text-orange-400">เครื่องอบผ้า (Dryer)</h3>
-                        </div>
-                        <div id="admin-dryer-zone" class="space-y-3"></div>
+                    <div id="admin-aqua-zone" class="grid grid-cols-2 gap-3"></div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-3 px-1">
+                        <span class="p-1.5 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
+                        <h3 class="text-sm font-bold">เครื่องอบผ้า (Dryer)</h3>
                     </div>
+                    <div id="admin-dryer-zone" class="grid grid-cols-2 gap-3"></div>
                 </div>
             </div>
         </div>
@@ -678,14 +672,11 @@
             .replace(/id="timer-/g, 'id="atimer-')
             .replace(/id="circle-/g, 'id="acircle-');
 
-        // ── Layout: flex-col (mobile) → flex-row (desktop) ────────
+        // ── Layout: card บน + ปุ่มล่าง (เหมือนหน้า user, ความกว้างเท่ากัน) ──
         return `
-        <div class="flex flex-col lg:flex-row gap-2 items-stretch">
-            <div class="flex-1 min-w-0">${cardHTML}</div>
-            <div class="grid grid-cols-4 lg:grid-cols-1 gap-1.5 p-1.5
-                        bg-white dark:bg-slate-800 rounded-2xl
-                        border border-slate-100 dark:border-slate-700 shadow-sm
-                        lg:w-[80px] lg:flex-shrink-0">
+        <div class="flex flex-col gap-1.5">
+            ${cardHTML}
+            <div class="grid grid-cols-4 gap-1.5 px-1">
                 ${ctrlBtns}
             </div>
         </div>`;

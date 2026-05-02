@@ -616,7 +616,13 @@
     // Machine Command — เขียนคำสั่งลง Firebase ให้ scraper execute
     // ============================================================
     window.sendCommand = async function(machineId, action, label) {
-        const btnId = `cmd-${machineId}-${action}`;
+        // ── Confirm ก่อนส่งคำสั่งทุกครั้ง ──
+        const num = machineId.replace(/\D/g, '');
+        const displayName = machineId.startsWith('W') ? `เครื่องซัก ${num}` :
+                            machineId.startsWith('D') ? `เครื่องอบ ${num}` : machineId;
+        if (!confirm(`ยืนยันการสั่งงาน\n\nเครื่อง: ${displayName}\nคำสั่ง: ${label}\n\nกด OK เพื่อยืนยัน`)) return;
+
+        const btnId = `acmd-${machineId}-${action}`;
         const btn = document.getElementById(btnId);
         if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
         try {
@@ -626,9 +632,8 @@
                 requested_at: new Date().toISOString(),
                 requested_by: liffUserId || 'admin'
             });
-            showToast(`${label} → ${machineId} ส่งคำสั่งแล้วครับ`, '✅', 3000);
-            // รีเซ็ตปุ่มหลัง 5 วินาที
-            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = label; } }, 5000);
+            showToast(`${label} → ${displayName} ส่งคำสั่งแล้วครับ`, '✅', 3000);
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = label; } }, 8000);
         } catch(e) {
             showToast('ส่งคำสั่งไม่ได้: ' + e.message, '❌', 3000);
             if (btn) { btn.disabled = false; btn.textContent = label; }

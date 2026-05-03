@@ -17,18 +17,141 @@
         }
     </script>
     <style>
-        body { transition: background-color 0.3s ease, color 0.3s ease; -webkit-tap-highlight-color: transparent; }
-        .skeleton { background: linear-gradient(90deg, var(--color-background-secondary) 25%, var(--color-background-tertiary) 50%, var(--color-background-secondary) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
+        /* ── Brand Colors ─────────────────────────────────────── */
+        :root {
+            /* ── Brand Colors ────────────────────────────────── */
+            --brand:       #77333b;
+            --brand-light: #9a4a54;
+            --brand-soft:  #f5eced;
+            --sage:        #829F82;
+            --sage-dark:   #5e7a5e;
+            --sage-soft:   #eef4ee;
+
+            /* ── Machine Status Colors ───────────────────────── */
+            --s-available: #829F82;   /* sage green — ว่าง */
+            --s-wash:      #4F7BC4;   /* steel blue — ซักอยู่ */
+            --s-dry:       #C07B3A;   /* warm amber — อบอยู่ */
+            --s-ready:     #B89030;   /* warm gold — ready to start */
+            --s-complete:  #7B5EA7;   /* soft violet — เสร็จแล้ว */
+            --s-error:     #77333b;   /* brand wine — error/OOO */
+            --s-partial:   #C07B3A;   /* warm amber — partial vend */
+            --s-offline:   #9A9490;   /* warm grey — offline */
+
+            /* ── Warm Neutral Palette ─────────────────────────  */
+            --bg-page:     #F2EDE8;   /* parchment cream */
+            --bg-card:     #FDFAF7;   /* near white warm */
+            --bg-subtle:   #EDE7DE;   /* dividers */
+            --text-main:   #2C1F1A;   /* very dark warm brown */
+            --text-sub:    #7A6860;   /* mid warm brown */
+            --text-muted:  #B0A098;
+            --border:      #DDD5CB;
+        }
+        .dark {
+            --bg-page:    #17120F;
+            --bg-card:    #211916;
+            --bg-subtle:  #2E2420;
+            --text-main:  #F0E8E0;
+            --text-sub:   #A89890;
+            --text-muted: #7A6E6A;
+            --border:     #3A2C28;
+        }
+
+        /* ── Light Mode: Warm Cream ───────────────────────── */
+        body {
+            background-color: var(--bg-page) !important;
+            color: var(--text-main) !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Noto Sans Thai', 'Sarabun', sans-serif;
+        }
+        .dark body, .dark { background-color: var(--bg-page) !important; color: var(--text-main) !important; }
+
+        /* ── Glass Header ─────────────────────────────────── */
+        .glass-card {
+            backdrop-filter: blur(12px);
+            background: rgba(253, 250, 247, 0.94) !important;
+            border-bottom: 1px solid var(--border) !important;
+            box-shadow: 0 1px 0 rgba(119,51,59,0.08) !important;
+        }
+        .dark .glass-card {
+            background: rgba(33, 25, 22, 0.94) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        /* ── Warm card backgrounds ─────────────────────────── */
+        .bg-white { background-color: var(--bg-card) !important; }
+        .dark .bg-white { background-color: var(--bg-card) !important; }
+        .bg-\[#f8fafc\], body { background-color: var(--bg-page) !important; }
+
+        /* ── Machine Card ─────────────────────────────────── */
+        .machine-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(44,31,26,0.06), 0 4px 12px rgba(44,31,26,0.04);
+            transition: all 0.2s ease;
+        }
+        .machine-card:hover { box-shadow: 0 2px 8px rgba(44,31,26,0.10), 0 8px 24px rgba(44,31,26,0.06); }
+        .dark .machine-card { background: var(--bg-card); border-color: var(--border); }
+
+        /* ── Machine status header bar ──────────────────────── */
+        .machine-header {
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Status badge pills ─────────────────────────────── */
+        .status-pill {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        /* ── Stat bar separator ─────────────────────────────── */
+        .stat-bar { border-top: 1px solid var(--border); }
+        .stat-divider { width: 1px; height: 16px; background: var(--border); }
+        .stat-label { color: var(--text-muted); }
+        .stat-value { color: var(--text-main); }
+
+        /* ── Brand accent top line ──────────────────────────── */
+        header::before {
+            content: '';
+            display: block;
+            height: 3px;
+            background: linear-gradient(90deg, var(--brand) 0%, var(--sage) 100%);
+        }
+
+        /* ── Zone headers ──────────────────────────────────── */
+        .zone-header-washer { color: var(--sage-dark,#5e7a5e) !important; }
+        .zone-header-dryer  { color: #b5651d !important; }
+        .zone-header-aqua   { color: var(--brand) !important; }
+
+        /* ── Buttons ──────────────────────────────────────── */
+        .btn-primary {
+            background: var(--brand);
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover { background: var(--brand-light); }
+
+        .skeleton { background: linear-gradient(90deg, #e8e0d8 25%, #f0e8e0 50%, #e8e0d8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 12px; }
+        .dark .skeleton { background: linear-gradient(90deg, var(--color-background-secondary) 25%, var(--color-background-tertiary) 50%, var(--color-background-secondary) 75%); background-size: 200% 100%; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         @keyframes statusPulse { 0%,100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px var(--pulse-color, #3498db66); } 60% { box-shadow: 0 0 0 6px var(--pulse-color, #3498db22); } }
         .status-changed { animation: statusPulse 1.2s ease-out; }
         .pull-indicator { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: var(--color-background-primary); border-radius: 0 0 20px 20px; padding: 6px 20px; font-size: 12px; color: var(--color-text-secondary); z-index: 100; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         @keyframes slow-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-slow-spin { animation: slow-spin 12s linear infinite; }
-        .glass-card { backdrop-filter: blur(8px); background: rgba(255, 255, 255, 0.8); }
-        .dark .glass-card { background: rgba(30, 41, 59, 0.8); }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #c4b5ad; border-radius: 10px; }
         .dark ::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
@@ -40,7 +163,10 @@
             <div class="flex items-center gap-2 min-w-0">
                 <img src="Logo.png" alt="Logo" class="h-8 object-contain dark:brightness-110 flex-shrink-0" onerror="this.style.display='none'">
                 <div class="min-w-0">
-                    <h1 class="text-[15px] font-extrabold tracking-tight dark:text-white leading-tight truncate">My Laundry (Wash & Dry)</h1>
+                    <h1 class="text-[15px] font-extrabold tracking-tight leading-tight truncate">
+                        <span style="color:#77333b">my</span><span style="color:#829F82">laundry</span>
+                        <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 ml-1">wash & dry</span>
+                    </h1>
                     <div class="flex items-center gap-1">
                         <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
                         <span class="text-[9px] font-semibold text-slate-400" id="last-sync-display">--:--</span>
@@ -60,23 +186,23 @@
             </div>
         </div>
         <!-- แถวที่ 2: ภาพรวมระบบ -->
-        <div class="flex items-center justify-around mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/50">
+        <div class="flex items-center justify-around mt-2 pt-2" style="border-top:1px solid var(--border)">
             <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
-                <span class="text-[11px] text-slate-500 dark:text-slate-400">ว่างพร้อมใช้</span>
-                <span id="stat-ready" class="text-sm font-black text-emerald-500">0</span>
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:var(--s-available)"></span>
+                <span class="text-[11px]" style="color:var(--text-muted)">ว่างพร้อมใช้</span>
+                <span id="stat-ready" class="text-sm font-black" style="color:var(--s-available)">0</span>
             </div>
-            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+            <div class="stat-divider"></div>
             <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
-                <span class="text-[11px] text-slate-500 dark:text-slate-400">กำลังทำงาน</span>
-                <span id="stat-busy" class="text-sm font-black text-blue-500">0</span>
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:var(--s-wash)"></span>
+                <span class="text-[11px]" style="color:var(--text-muted)">กำลังทำงาน</span>
+                <span id="stat-busy" class="text-sm font-black" style="color:var(--s-wash)">0</span>
             </div>
-            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+            <div class="stat-divider"></div>
             <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span>
-                <span class="text-[11px] text-slate-500 dark:text-slate-400">ซักเสร็จแล้ว</span>
-                <span id="stat-done" class="text-sm font-black text-purple-500">0</span>
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:var(--s-complete)"></span>
+                <span class="text-[11px]" style="color:var(--text-muted)">ซักเสร็จแล้ว</span>
+                <span id="stat-done" class="text-sm font-black" style="color:var(--s-complete)">0</span>
             </div>
         </div>
     </header>
@@ -175,8 +301,8 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div>
                         <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                            <span class="text-blue-500 text-sm">🌀</span>
-                            <h3 class="text-xs font-black text-blue-600 dark:text-blue-400">เครื่องซักผ้า (Washer)</h3>
+                            <span class="text-sm" style="color:#829F82">🌀</span>
+                            <h3 class="text-xs font-black" style="color:#829F82">เครื่องซักผ้า (Washer)</h3>
                         </div>
                         <div id="admin-washer-zone" class="grid grid-cols-2 gap-3"></div>
                     </div>
@@ -189,8 +315,8 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                            <span class="text-orange-500 text-sm">🔥</span>
-                            <h3 class="text-xs font-black text-orange-600 dark:text-orange-400">เครื่องอบผ้า (Dryer)</h3>
+                            <span class="text-sm" style="color:#b5651d">🔥</span>
+                            <h3 class="text-xs font-black" style="color:#b5651d">เครื่องอบผ้า (Dryer)</h3>
                         </div>
                         <div id="admin-dryer-zone" class="grid grid-cols-2 gap-3"></div>
                     </div>
@@ -203,7 +329,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-4">
-                        <span class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 text-sm">🌀</span>
+                        <span class="p-2 rounded-lg text-sm" style="background:#eef4ee;color:#829F82">🌀</span>
                         <h2 class="text-lg font-bold tracking-tight">เครื่องซักผ้า (Washer)</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-4" id="washer-zone">
@@ -213,14 +339,14 @@
                 </section>
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-4">
-                        <span class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-500 text-sm">✨</span>
+                        <span class="p-2 rounded-lg text-sm" style="background:#f3eced;color:#77333b">✨</span>
                         <h2 class="text-lg font-bold tracking-tight">เครื่องซัก-อบ All-in-one (AQUA)</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-4" id="all-in-one-zone"></div>
                 </section>
                 <section class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
                     <div class="flex items-center gap-2 mb-4">
-                        <span class="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg text-orange-500 text-sm">🔥</span>
+                        <span class="p-2 rounded-lg text-sm" style="background:#fef3e8;color:#b5651d">🔥</span>
                         <h2 class="text-lg font-bold tracking-tight">เครื่องอบผ้า (Dryer)</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-4" id="dryer-zone">
@@ -996,18 +1122,33 @@ function createMachineHTML(name, info) {
         const center = isAqua ? 50 : 40;
         const circ = 2 * Math.PI * radius;
 
-        const getStatusColor = (info, isWasher) => {
-            if (!info || info.status?.toLowerCase() === 'offline') return 'slate-400';
+        // ── ดึง CSS variable color สำหรับ status ──────────────
+        const getStatusHex = (info, isWasher) => {
+            if (!info || info.status?.toLowerCase() === 'offline') return 'var(--s-offline)';
             const status = info.status.toLowerCase();
             const isBusy = info.finish_at && Date.parse(info.finish_at) > Date.now();
-            if (isBusy) return isWasher ? 'blue-500' : 'orange-500';
-            if (status === 'busy') return isWasher ? 'blue-500' : 'orange-500';
-            if (status === 'complete') return 'purple-500';
-            if (status === 'error' || status === 'outoforder') return 'red-500';
-            if (status === 'unavailable') return 'slate-400';
-            if (status === 'readytostart') return 'yellow-500';
-            if (status === 'partialvend') return 'yellow-400';
-            return 'emerald-500';
+            if (isBusy || status === 'busy') return isWasher ? 'var(--s-wash)' : 'var(--s-dry)';
+            if (status === 'complete')       return 'var(--s-complete)';
+            if (status === 'error' || status.includes('outoforder')) return 'var(--s-error)';
+            if (status === 'unavailable')    return 'var(--s-offline)';
+            if (status === 'readytostart')   return 'var(--s-ready)';
+            if (status === 'partialvend')    return 'var(--s-partial)';
+            return 'var(--s-available)';
+        };
+        // backward-compat alias ที่คืน class name (ใช้ใน admin panel เดิม)
+        const getStatusColor = (info, isWasher) => {
+            const hex = getStatusHex(info, isWasher);
+            const map = {
+                'var(--s-available)': 'emerald-500',
+                'var(--s-wash)':      'blue-500',
+                'var(--s-dry)':       'orange-500',
+                'var(--s-ready)':     'yellow-500',
+                'var(--s-complete)':  'purple-500',
+                'var(--s-error)':     'red-600',
+                'var(--s-offline)':   'slate-400',
+                'var(--s-partial)':   'yellow-400',
+            };
+            return map[hex] || 'slate-400';
         };
 
         // ตรวจสอบ: countdown ถึง 0 แต่ Firebase ยังไม่อัปเดต
@@ -1022,28 +1163,29 @@ function createMachineHTML(name, info) {
             return h + ':' + m + ' น.';
         })() : null;
 
-        const themeColor = getStatusColor(info, isWasher);
+        const statusHex   = getStatusHex(info, isWasher);
+        const themeColor  = getStatusColor(info, isWasher); // kept for pill badges
 
         // Template สำหรับ Card
         return `
-            <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm transition-all flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-60' : ''}">
-                <div class="bg-${themeColor} py-1.5 text-center text-[14px] font-black text-white uppercase tracking-tight">${displayName}</div>
+            <div class="machine-card flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-50' : ''}">
+                <div class="machine-header" style="background:${statusHex}">${displayName}</div>
                 <div class="flex-grow flex flex-col items-center justify-center p-3">
                     
                     <div class="flex items-center gap-1.5 mb-2">
-                        ${capacityText ? `<div class="text-[12px] font-black text-${themeColor} tracking-widest px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">${capacityText}</div>` : '<div class="h-[26px]"></div>'}
-                        ${(info && info.price > 0) ? `<div class="text-[11px] font-bold text-${themeColor} px-2 py-0.5 rounded-md border border-${themeColor}/20 bg-${themeColor}/5">฿${info.price}</div>` : ''}
+                        ${capacityText ? `<div class="status-pill" style="color:${statusHex};border-color:${statusHex}33;background:${statusHex}0D">${capacityText}</div>` : '<div class="h-[26px]"></div>'}
+                        ${(info && info.price > 0) ? `<div class="status-pill" style="color:${statusHex};border-color:${statusHex}33;background:${statusHex}0D">฿${info.price}</div>` : ''}
                     </div>
                     
                     <div class="relative ${svgSize} mb-2">
                         <svg viewBox="${viewBox}" class="w-full h-full">
-                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-slate-100 dark:text-slate-800" stroke-width="${isAqua ? 6 : 4}" fill="transparent"/>
+                            <circle cx="${center}" cy="${center}" r="${radius}" stroke="var(--bg-subtle)" stroke-width="${isAqua ? 6 : 4}" fill="transparent"/>
                             ${(info && info.status?.toLowerCase() !== 'offline') ? `
-                            <circle id="circle-${name}" cx="${center}" cy="${center}" r="${radius}" stroke="currentColor" class="text-${themeColor} transition-all duration-1000" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
-                                stroke-dasharray="${circ}" stroke-dashoffset="${isBusy ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center;"/>
+                            <circle id="circle-${name}" cx="${center}" cy="${center}" r="${radius}" stroke="${statusHex}" stroke-width="${isAqua ? 6 : 4}" fill="transparent"
+                                stroke-dasharray="${circ}" stroke-dashoffset="${isBusy ? circ * (1 - (1 - ((Date.parse(info.finish_at) - Date.now()) / (30 * 60000)))) : 0}" stroke-linecap="round" style="transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 1s ease;"/>
                             ` : ''}
                         </svg>
-                        <div id="timer-${name}" class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black">
+                        <div id="timer-${name}" class="absolute inset-0 flex items-center justify-center ${isAqua ? 'text-1xl' : 'text-[11px]'} font-black" style="color:${statusHex}">
                             ${(!info || info.status?.toLowerCase() === 'offline') ? 'OFFLINE' : ( isBusy ? 
                                 `${Math.floor((Date.parse(info.finish_at) - Date.now()) / 60000)}:${String(Math.floor(((Date.parse(info.finish_at) - Date.now()) % 60000) / 1000)).padStart(2,'0')}` : 
                                 (() => {
@@ -1058,7 +1200,7 @@ function createMachineHTML(name, info) {
                                 })() )}
                         </div>
                     </div>
-                    <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                    <div class="text-[11px] font-semibold mt-0.5" style="color:var(--text-sub)">
                         ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( isBusy ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (isUpdating ? 'กำลังอัปเดต...' : (() => {
                             const st = info.status?.toLowerCase();
                             if (st === 'complete') return '✨ ซักเสร็จ พร้อมนำออก';

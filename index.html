@@ -517,29 +517,42 @@
             const todayData = typeof rawToday === 'object' && !Array.isArray(rawToday)
                 ? Object.values(rawToday) : [];
 
-            const total = todayData.length;
-            // รายได้: ใช้ price จาก history (บันทึกตอนเริ่ม) ซึ่งถูกต้องแล้ว
-            const revenue = todayData.reduce((s, r) => s + (Number(r.price) || 0), 0);
-            document.getElementById('admin-total-today').innerText = total;
+            // ── กรองล้างถัง (drum cleaning) ออก ──────────────────────
+            // ล้างถังซัก = price 0 บาท (Normal Hot 49m, Warm 12m, Cold 2m)
+            // เครื่องอบไม่มีปัญหานี้ (ทุก cycle คิดเงิน)
+            const isCleaning = (r) => {
+                if (Number(r.price) > 0) return false;      // มีราคา = ซักจริง
+                if (r.machine_id?.startsWith('D')) return false;  // Dryer ไม่ล้างถัง
+                return true;  // Washer price=0 = ล้างถัง
+            };
+
+            const paidCycles  = todayData.filter(r => !isCleaning(r));
+            const cleanCycles = todayData.filter(r =>  isCleaning(r));
+
+            const total   = paidCycles.length;   // เฉพาะรอบที่คิดเงิน
+            const revenue = paidCycles.reduce((s, r) => s + (Number(r.price) || 0), 0);
+
+            document.getElementById('admin-total-today').innerText  = total
+                + (cleanCycles.length ? ` (+${cleanCycles.length}🧴)` : '');
             document.getElementById('admin-revenue-today').innerText = '฿' + revenue.toLocaleString();
 
-            // Peak Hour
+            // Peak Hour (เฉพาะรอบที่คิดเงิน)
             const hourCounts = Array(24).fill(0);
-            todayData.forEach(r => { if (r.hour !== undefined) hourCounts[r.hour]++; });
+            paidCycles.forEach(r => { if (r.hour !== undefined) hourCounts[r.hour]++; });
             const maxHour = Math.max(...hourCounts);
             const peakHour = maxHour > 0 ? hourCounts.indexOf(maxHour) : -1;
             document.getElementById('admin-peak-hour').innerText = peakHour >= 0 ? `${peakHour}:00` : '-';
 
-            // Subscribers (sum from machines)
+            // Subscribers
             let totalSubs = 0;
             if (currentData) {
                 Object.values(currentData).forEach(m => { totalSubs += (m?.subscriber_count || 0); });
             }
             document.getElementById('admin-subscribers').innerText = totalSubs;
 
-            // Utilization: busy rounds / total machines / hours open (approx)
+            // Utilization: เฉพาะรอบที่คิดเงิน (ไม่นับล้างถัง)
             const machineCount = Object.keys(currentData || {}).filter(n => !n.startsWith('AQUA')).length || 8;
-            const hoursOpen = Math.max(1, localDate.getHours() - 6); // เปิด 6 โมง
+            const hoursOpen = Math.max(1, localDate.getHours() - 6);
             const util = machineCount > 0 ? Math.min(100, Math.round((total / (machineCount * hoursOpen)) * 100)) : 0;
             document.getElementById('admin-utilization').innerText = util + '%';
 
@@ -779,12 +792,20 @@
                 ),
             ],
 
-            busy: [
-                btn('pause',         '⏸', 'Pause Machine',          WARN),
-                btn('stop',          '⏹', 'Stop Machine',           DANGER),
-                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
-                btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
-            ],
+            busy: isDryer
+                ? [   // Dryer IN USE — ใส่เวลาเพิ่ม/ลดได้
+                    btn('start_dryer_time', '⏱', 'Start with minutes', NEUTRAL,
+                        `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`),
+                    btn('stop',          '⏹', 'Stop Machine',           DANGER),
+                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
+                    btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
+                  ]
+                : [   // Washer IN USE
+                    btn('pause',         '⏸', 'Pause Machine',          WARN),
+                    btn('stop',          '⏹', 'Stop Machine',           DANGER),
+                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
+                    btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
+                  ],
 
             partialvend: [
                 btn('clear_partial', '🧹', 'Clear Partial Vend', WARN),

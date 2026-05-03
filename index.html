@@ -438,7 +438,7 @@
         // SHA-256 ของรหัสผ่านจริง — เปลี่ยนได้โดยรัน:
         //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_PASSWORD'))
         //   .then(b => [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''))
-        const ADMIN_HASH = '0bc07174e7f5296615888bed0372ac76f6b8d8cc45d37e6dfe5d9db350bd5c59';
+        const ADMIN_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
         // ↑ SHA-256 ของ "admin" — เปลี่ยนเป็น hash ของรหัสผ่านจริงก่อน deploy
 
         try {
@@ -691,15 +691,17 @@
     // ============================================================
     // Machine Command — เขียนคำสั่งลง Firebase ให้ scraper execute
     // ============================================================
-    window.sendCommand = async function(machineId, action, label) {
+    window.sendCommand = async function(machineId, action, label, extraParams = {}) {
         const num = machineId.replace(/\D/g, '');
         const displayName = machineId.startsWith('W') ? `เครื่องซัก ${num}` :
                             machineId.startsWith('D') ? `เครื่องอบ ${num}` : machineId;
 
-        // ใช้ custom modal แทน window.confirm (ใช้ได้ทั้ง PC + มือถือ)
+        // ป้องกัน start_dryer_time ถ้าผู้ใช้กด Cancel บน prompt
+        if (action === 'start_dryer_time' && (!extraParams.minutes || extraParams.minutes === 'null')) return;
+
         const confirmed = await window.showConfirmModal(
             'ยืนยันการสั่งงาน',
-            `เครื่อง: ${displayName}\nคำสั่ง: ${label}`
+            `เครื่อง: ${displayName}\nคำสั่ง: ${label}${action === 'start_dryer_time' ? `\nเวลา: ${extraParams.minutes} นาที` : ''}`
         );
         if (!confirmed) return;
 
@@ -709,6 +711,7 @@
         try {
             await set(ref(database, `laundry_system/commands/${machineId}`), {
                 action, status: 'pending',
+                params: Object.keys(extraParams).length ? extraParams : null,
                 requested_at: new Date().toISOString(),
                 requested_by: liffUserId || 'admin'
             });
@@ -727,45 +730,106 @@
     function createAdminMachineCard(name, info) {
         const isBusy = info?.finish_at && Date.parse(info.finish_at) > Date.now();
         const st = info?.status?.toLowerCase() || 'offline';
-        const effectiveStatus = isBusy ? 'busy' : st;
+        const effectiveStatus = isBusy ? 'busy'
+            : st.includes('outoforder') || st.includes('out_of_order') ? 'outoforder'
+            : st.includes('ready') ? 'readytostart'
+            : st.includes('partial') ? 'partialvend'
+            : st.includes('complete') ? 'complete'
+            : st.includes('error') ? 'error'
+            : st;
 
-        // ── Control buttons ────────────────────────────────────────
-        const btn = (action, ico, lbl, cls) =>
-            `<button id="acmd-${name}-${action}" onclick="sendCommand('${name}','${action}','${lbl}')"
-                class="flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl text-[10px] font-bold active:scale-95 transition-all ${cls}">
+        const isDryer = name.startsWith('D');
+
+        // ── Button factory ──────────────────────────────────────────
+        const btn = (action, ico, lbl, cls, extraData='') =>
+            `<button id="acmd-${name}-${action}"
+                onclick="sendCommand('${name}','${action}','${lbl}'${extraData})"
+                class="flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl
+                       text-[10px] font-bold active:scale-95 transition-all ${cls}">
                 <span class="text-sm leading-none">${ico}</span>
-                <span class="leading-none">${lbl}</span>
+                <span class="leading-none text-center">${lbl}</span>
             </button>`;
 
-        const P='bg-blue-500 text-white',
-              D='bg-red-500/10 text-red-500 border border-red-200 dark:border-red-800',
-              W='bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800',
-              N='bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+        // ── Colour palette ──────────────────────────────────────────
+        const PRIMARY = 'bg-blue-500 text-white';
+        const DANGER  = 'bg-red-500/10 text-red-500 border border-red-200 dark:border-red-800';
+        const WARN    = 'bg-yellow-400/15 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800';
+        const NEUTRAL = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+        const SUCCESS = 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800';
+        const PURPLE  = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800';
 
+        // ── Button sets per status ──────────────────────────────────
+        // ใช้ text เดียวกับ ipsoconnect เพื่อความคุ้นเคย
         const allBtns = {
-            available:    [btn('start','▶','Start',P),   btn('remote_vend','💰','Vend',N), btn('clear_partial','🧹','Clear',N), btn('out_of_order','🚫','OOO',D)],
-            busy:         [btn('pause','⏸','Pause',W),   btn('stop','⏹','Stop',D),          btn('rapid_advance','⚡','Rapid',N), btn('rapid_advance_next','⏭','Next',N)],
-            readytostart: [btn('start','▶','Start',P),   btn('clear_errors','🔄','Clear',N), btn('rapid_advance','⚡','Rapid',N), btn('out_of_order','🚫','OOO',D)],
-            partialvend:  [btn('clear_partial','🧹','Clear',W), btn('start','▶','Start',P), btn('rapid_advance','⚡','Rapid',N), btn('out_of_order','🚫','OOO',D)],
-            complete:     [btn('clear_errors','🔄','Reset',N), btn('out_of_order','🚫','OOO',D)],
-            error:        [btn('clear_errors','🔄','Clear',W), btn('out_of_order','🚫','OOO',D)],
-            outoforder:   [btn('clear_errors','🔄','Clear',W), btn('out_of_order','🚫','OOO',D)],
-        };
-        const ctrlBtns = (allBtns[effectiveStatus] || [btn('clear_errors','🔄','Clear',N), btn('out_of_order','🚫','OOO',D)]).join('');
+            available: [
+                btn('start',         '▶', 'Start Machine',       PRIMARY),
+                btn('clear_partial', '🧹', 'Clear Partial Vend',  NEUTRAL),
+                btn('clear_error',   '🔴', 'Clear errors',        NEUTRAL),
+                btn('out_of_order',  '🚫', "Set Out of Order",    DANGER),
+            ],
 
-        // ── Machine card (clone from user, prefix IDs ไม่ให้ซ้ำ) ──
+            readytostart: [
+                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
+                btn('clear_partial', '🧹', 'Clear Partial Vend',      NEUTRAL),
+                btn('clear_error',   '🔴', 'Clear errors',             NEUTRAL),
+                ...(isDryer
+                    ? [btn('start_dryer_time', '⏱', 'Start with minutes', NEUTRAL,
+                           `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`)]
+                    : [btn('out_of_order', '🚫', "Set Out of Order",    DANGER)]
+                ),
+            ],
+
+            busy: [
+                btn('pause',         '⏸', 'Pause Machine',          WARN),
+                btn('stop',          '⏹', 'Stop Machine',           DANGER),
+                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
+                btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
+            ],
+
+            partialvend: [
+                btn('clear_partial', '🧹', 'Clear Partial Vend', WARN),
+                btn('start',         '▶', 'Start Machine',       PRIMARY),
+                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
+                btn('out_of_order',  '🚫', "Set Out of Order",   DANGER),
+            ],
+
+            complete: [
+                btn('start',       '▶',  'Start Machine',  PRIMARY),
+                btn('clear_error', '🔴', 'Clear errors',   NEUTRAL),
+            ],
+
+            error: [
+                btn('clear_error', '🔴', 'Clear errors',   WARN),
+                btn('out_of_order','🚫', "Set Out of Order", DANGER),
+            ],
+
+            outoforder: [
+                btn('cancel_out_of_order', '✅', "Remove Out of Order", SUCCESS),
+                btn('clear_error',         '🔴', 'Clear errors',        NEUTRAL),
+            ],
+
+            offline: [],
+        };
+
+        const ctrlBtns = (allBtns[effectiveStatus]
+            ?? [btn('clear_error','🔴','Clear errors',NEUTRAL),
+                btn('out_of_order','🚫','Set Out of Order',DANGER)]).join('');
+
+        // ── Machine card ────────────────────────────────────────────
         let cardHTML = createMachineHTML(name, info);
         cardHTML = cardHTML
-            .replace(/id="timer-/g, 'id="atimer-')
+            .replace(/id="timer-/g,  'id="atimer-')
             .replace(/id="circle-/g, 'id="acircle-');
 
-        // ── Layout: card บน + ปุ่ม 2-col ล่าง (เท่ากับหน้า user) ──
+        const btnCount = (allBtns[effectiveStatus] ?? []).length;
+        const gridCols = btnCount <= 2 ? 'grid-cols-2'
+                       : btnCount === 3 ? 'grid-cols-3'
+                       : 'grid-cols-2';
+
         return `
         <div class="flex flex-col gap-1.5">
             ${cardHTML}
-            <div class="grid grid-cols-2 gap-1.5 px-1">
-                ${ctrlBtns}
-            </div>
+            ${ctrlBtns ? `<div class="grid ${gridCols} gap-1.5 px-1">${ctrlBtns}</div>` : ''}
         </div>`;
     }
 

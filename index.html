@@ -315,7 +315,7 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-1.5 mb-2 px-1 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                            <span class="text-sm" style="color:#b5651d">🔥</span>
+                            <span class="text-sm" style="color:#b5651d">☀</span>
                             <h3 class="text-xs font-black" style="color:#b5651d">เครื่องอบผ้า (Dryer)</h3>
                         </div>
                         <div id="admin-dryer-zone" class="grid grid-cols-2 gap-3"></div>
@@ -903,7 +903,7 @@
             available: [
                 btn('start',         '▶', 'Start Machine',       WARN),
                 btn('clear_partial', '🧹', 'Clear Partial Vend',  WARN),
-                btn('clear_error',   '🔴', 'Clear errors',        WARN),
+                btn('clear_error',   '\ue8b8', 'Clear errors',        WARN),
                 btn('out_of_order',  '🚫', "Set Out of Order",    WARN),
             ],
 
@@ -1203,7 +1203,7 @@ function createMachineHTML(name, info) {
                     <div class="text-[11px] font-semibold mt-0.5" style="color:var(--text-sub)">
                         ${(!info || info.status?.toLowerCase() === 'offline') ? 'รอเชื่อมต่อระบบ' : ( isBusy ? (isWasher ? 'กำลังซัก...' : 'กำลังอบ...') : (isUpdating ? 'กำลังอัปเดต...' : (() => {
                             const st = info.status?.toLowerCase();
-                            if (st === 'complete') return '✨ ซักเสร็จ พร้อมนำออก';
+                            if (st === 'complete') return '✨ ซัก/อบ เสร็จ พร้อมนำออก';
                             if (st === 'error') return '⚠️ เครื่อง Error';
                             if (st === 'outoforder') return '🚫 Out of order';
                             if (st === 'unavailable') return '🚫 Out of order';

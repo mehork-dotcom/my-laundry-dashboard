@@ -904,7 +904,7 @@
                 btn('start',         '▶', 'Start Machine',       WARN),
                 btn('clear_partial', '↺', 'Clear Partial Vend',  WARN),
                 btn('clear_error',   '∥', 'Clear errors',        WARN),
-                btn('out_of_order',  '✇', "Set Out of Order",    WARN),
+                btn('out_of_order',  '⊘', "Set Out of Order",    WARN),
             ],
 
             readytostart: [
@@ -914,7 +914,7 @@
                 ...(isDryer
                     ? [btn('start_dryer_time', '⏱', 'Start with minutes', WARN,
                            `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`)]
-                    : [btn('out_of_order', '✇', "Set Out of Order",    WARN)]
+                    : [btn('out_of_order', '⊘', "Set Out of Order",    WARN)]
                 ),
             ],
 
@@ -937,7 +937,7 @@
                 btn('clear_partial', '↺', 'Clear Partial Vend', WARN),
                 btn('start',         '▶', 'Start Machine',       WARN),
                 btn('rapid_advance', '⇥', 'Rapid Advance to Ready', WARN),
-                btn('out_of_order',  '✇', "Set Out of Order",   WARN),
+                btn('out_of_order',  '⊘', "Set Out of Order",   WARN),
             ],
 
             complete: [
@@ -947,7 +947,7 @@
 
             error: [
                 btn('clear_error', '∥', 'Clear errors',   WARN),
-                btn('out_of_order','✇', "Set Out of Order", WARN),
+                btn('out_of_order','⊘', "Set Out of Order", WARN),
             ],
 
             outoforder: [
@@ -960,7 +960,7 @@
 
         const ctrlBtns = (allBtns[effectiveStatus]
             ?? [btn('clear_error','∥','Clear errors',WARN),
-                btn('out_of_order','✇','Set Out of Order',WARN)]).join('');
+                btn('out_of_order','⊘','Set Out of Order',WARN)]).join('');
 
         // ── Machine card ────────────────────────────────────────────
         let cardHTML = createMachineHTML(name, info);

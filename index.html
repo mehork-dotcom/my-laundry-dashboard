@@ -901,16 +901,16 @@
         // ใช้ text เดียวกับ ipsoconnect เพื่อความคุ้นเคย
         const allBtns = {
             available: [
-                btn('start',         '▶', 'Start Machine',       WARN),
+                btn('start',         '▻', 'Start Machine',       WARN),
                 btn('clear_partial', '↺', 'Clear Partial Vend',  WARN),
-                btn('clear_error',   '∥', 'Clear errors',        WARN),
+                btn('clear_error',   '//', 'Clear errors',        WARN),
                 btn('out_of_order',  '⊘', "Set Out of Order",    WARN),
             ],
 
             readytostart: [
                 btn('rapid_advance', '⇥', 'Rapid Advance to Ready', WARN),
                 btn('clear_partial', '↺', 'Clear Partial Vend',      WARN),
-                btn('clear_error',   '∥', 'Clear errors',             WARN),
+                btn('clear_error',   '//', 'Clear errors',             WARN),
                 ...(isDryer
                     ? [btn('start_dryer_time', '⏱', 'Start with minutes', WARN,
                            `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`)]
@@ -924,42 +924,42 @@
                         `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`),
                     btn('stop',          '⏹', 'Stop Machine',           WARN),
                     btn('rapid_advance', '⇥', 'Rapid Advance to Ready', WARN),
-                    btn('clear_error',   '∥', 'Clear errors',           WARN),
+                    btn('clear_error',   '//', 'Clear errors',           WARN),
                   ]
                 : [   // Washer IN USE
                     btn('pause',         '⏸', 'Pause Machine',          WARN),
                     btn('stop',          '⏹', 'Stop Machine',           WARN),
                     btn('rapid_advance', '⇥', 'Rapid Advance to Ready', WARN),
-                    btn('clear_error',   '∥', 'Clear errors',           WARN),
+                    btn('clear_error',   '//', 'Clear errors',           WARN),
                   ],
 
             partialvend: [
                 btn('clear_partial', '↺', 'Clear Partial Vend', WARN),
-                btn('start',         '▶', 'Start Machine',       WARN),
+                btn('start',         '▻', 'Start Machine',       WARN),
                 btn('rapid_advance', '⇥', 'Rapid Advance to Ready', WARN),
                 btn('out_of_order',  '⊘', "Set Out of Order",   WARN),
             ],
 
             complete: [
-                btn('start',       '▶',  'Start Machine',  WARN),
-                btn('clear_error', '∥', 'Clear errors',   WARN),
+                btn('start',       '▻',  'Start Machine',  WARN),
+                btn('clear_error', '//', 'Clear errors',   WARN),
             ],
 
             error: [
-                btn('clear_error', '∥', 'Clear errors',   WARN),
+                btn('clear_error', '//', 'Clear errors',   WARN),
                 btn('out_of_order','⊘', "Set Out of Order", WARN),
             ],
 
             outoforder: [
                 btn('cancel_out_of_order', '✅', "Remove Out of Order", WARN),
-                btn('clear_error',         '∥', 'Clear errors',        WARN),
+                btn('clear_error',         '//', 'Clear errors',        WARN),
             ],
 
             offline: [],
         };
 
         const ctrlBtns = (allBtns[effectiveStatus]
-            ?? [btn('clear_error','∥','Clear errors',WARN),
+            ?? [btn('clear_error','//','Clear errors',WARN),
                 btn('out_of_order','⊘','Set Out of Order',WARN)]).join('');
 
         // ── Machine card ────────────────────────────────────────────

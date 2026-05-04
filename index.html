@@ -901,66 +901,66 @@
         // ใช้ text เดียวกับ ipsoconnect เพื่อความคุ้นเคย
         const allBtns = {
             available: [
-                btn('start',         '▶', 'Start Machine',       PRIMARY),
-                btn('clear_partial', '🧹', 'Clear Partial Vend',  NEUTRAL),
-                btn('clear_error',   '🔴', 'Clear errors',        NEUTRAL),
-                btn('out_of_order',  '🚫', "Set Out of Order",    DANGER),
+                btn('start',         '▶', 'Start Machine',       WARN),
+                btn('clear_partial', '🧹', 'Clear Partial Vend',  WARN),
+                btn('clear_error',   '🔴', 'Clear errors',        WARN),
+                btn('out_of_order',  '🚫', "Set Out of Order",    WARN),
             ],
 
             readytostart: [
-                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
-                btn('clear_partial', '🧹', 'Clear Partial Vend',      NEUTRAL),
-                btn('clear_error',   '🔴', 'Clear errors',             NEUTRAL),
+                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', WARN),
+                btn('clear_partial', '🧹', 'Clear Partial Vend',      WARN),
+                btn('clear_error',   '🔴', 'Clear errors',             WARN),
                 ...(isDryer
-                    ? [btn('start_dryer_time', '⏱', 'Start with minutes', NEUTRAL,
+                    ? [btn('start_dryer_time', '⏱', 'Start with minutes', WARN,
                            `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`)]
-                    : [btn('out_of_order', '🚫', "Set Out of Order",    DANGER)]
+                    : [btn('out_of_order', '🚫', "Set Out of Order",    WARN)]
                 ),
             ],
 
             busy: isDryer
                 ? [   // Dryer IN USE — ใส่เวลาเพิ่ม/ลดได้
-                    btn('start_dryer_time', '⏱', 'Start with minutes', NEUTRAL,
+                    btn('start_dryer_time', '⏱', 'Start with minutes', WARN,
                         `, {minutes: prompt('อบกี่นาที? (เช่น 25)','30') || '30'}`),
-                    btn('stop',          '⏹', 'Stop Machine',           DANGER),
-                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
-                    btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
+                    btn('stop',          '⏹', 'Stop Machine',           WARN),
+                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', WARN),
+                    btn('clear_error',   '🔴', 'Clear errors',           WARN),
                   ]
                 : [   // Washer IN USE
                     btn('pause',         '⏸', 'Pause Machine',          WARN),
-                    btn('stop',          '⏹', 'Stop Machine',           DANGER),
-                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
-                    btn('clear_error',   '🔴', 'Clear errors',           NEUTRAL),
+                    btn('stop',          '⏹', 'Stop Machine',           WARN),
+                    btn('rapid_advance', '⚡', 'Rapid Advance to Ready', WARN),
+                    btn('clear_error',   '🔴', 'Clear errors',           WARN),
                   ],
 
             partialvend: [
                 btn('clear_partial', '🧹', 'Clear Partial Vend', WARN),
-                btn('start',         '▶', 'Start Machine',       PRIMARY),
-                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', PURPLE),
-                btn('out_of_order',  '🚫', "Set Out of Order",   DANGER),
+                btn('start',         '▶', 'Start Machine',       WARN),
+                btn('rapid_advance', '⚡', 'Rapid Advance to Ready', WARN),
+                btn('out_of_order',  '🚫', "Set Out of Order",   WARN),
             ],
 
             complete: [
-                btn('start',       '▶',  'Start Machine',  PRIMARY),
-                btn('clear_error', '🔴', 'Clear errors',   NEUTRAL),
+                btn('start',       '▶',  'Start Machine',  WARN),
+                btn('clear_error', '🔴', 'Clear errors',   WARN),
             ],
 
             error: [
                 btn('clear_error', '🔴', 'Clear errors',   WARN),
-                btn('out_of_order','🚫', "Set Out of Order", DANGER),
+                btn('out_of_order','🚫', "Set Out of Order", WARN),
             ],
 
             outoforder: [
-                btn('cancel_out_of_order', '✅', "Remove Out of Order", SUCCESS),
-                btn('clear_error',         '🔴', 'Clear errors',        NEUTRAL),
+                btn('cancel_out_of_order', '✅', "Remove Out of Order", WARN),
+                btn('clear_error',         '🔴', 'Clear errors',        WARN),
             ],
 
             offline: [],
         };
 
         const ctrlBtns = (allBtns[effectiveStatus]
-            ?? [btn('clear_error','🔴','Clear errors',NEUTRAL),
-                btn('out_of_order','🚫','Set Out of Order',DANGER)]).join('');
+            ?? [btn('clear_error','🔴','Clear errors',WARN),
+                btn('out_of_order','🚫','Set Out of Order',WARN)]).join('');
 
         // ── Machine card ────────────────────────────────────────────
         let cardHTML = createMachineHTML(name, info);

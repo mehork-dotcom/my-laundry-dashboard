@@ -439,7 +439,10 @@
                         sessionStorage.removeItem('pendingSubscribe');
                         showToast('กำลังลงทะเบียนแจ้งเตือน...', '⏳', 4000);
                         try {
-                            await set(ref(database, `laundry_system/subscriptions/${pendingMachine}/${liffUserId}`), true);
+                            await set(ref(database, `laundry_system/subscriptions/${pendingMachine}/${liffUserId}`), {
+                                machine_id: pendingMachine,
+                                subscribed_at: new Date().toISOString()
+                            });
                             subscribedMachines.add(pendingMachine);
                             saveSubscription(pendingMachine); // persist ใน localStorage
                             showToast('ลงทะเบียนแจ้งเตือนเรียบร้อยแล้วครับ!', '✅', 3000);
@@ -591,18 +594,45 @@
     // ── ฟัง Firebase commands node เพื่อ disable/enable ปุ่มอัตโนมัติ ──
     onValue(ref(database, 'laundry_system/commands'), (snap) => {
         const cmds = snap.exists() ? snap.val() : {};
-        // reset ทุกปุ่มก่อน
+
+        // หา machine ที่มี active command อยู่
+        const activeMachines = new Set(
+            Object.entries(cmds)
+                .filter(([, cmd]) => typeof cmd === 'object' && cmd &&
+                        ['pending','executing'].includes(cmd?.status))
+                .map(([mid]) => mid)
+        );
+
+        // reset เฉพาะปุ่มของเครื่องที่ไม่มี active command
         document.querySelectorAll('[id^="acmd-"]').forEach(btn => {
-            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+            const mid = btn.id.split('-')[1]; // "acmd-W1-start" → "W1"
+            if (activeMachines.has(mid)) return; // ข้ามเครื่องที่ยัง active
+
+            // save originalText ครั้งแรกเท่านั้น (ก่อนที่จะเคย disable)
+            if (!btn.dataset.originalText || btn.dataset.originalText === '⏳' || btn.dataset.originalText === '🔄') {
+                // originalText ยังไม่ถูก save หรือ save ผิด → อย่าเขียนทับ
+                if (btn.textContent !== '⏳' && btn.textContent !== '🔄') {
+                    btn.dataset.originalText = btn.textContent;
+                }
+            }
             btn.disabled = false;
-            btn.textContent = btn.dataset.originalText;
+            if (btn.textContent === '⏳' || btn.textContent === '🔄') {
+                btn.textContent = btn.dataset.originalText || btn.textContent;
+            }
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
         });
-        // disable ปุ่มของเครื่องที่ pending/executing + handle rejected
+
+        // disable ปุ่มของเครื่องที่ pending/executing
         Object.entries(cmds).forEach(([machineId, cmd]) => {
             if (typeof cmd !== 'object' || !cmd) return;
             if (['pending','executing'].includes(cmd?.status)) {
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
+                    // save originalText ก่อน disable (ถ้ายังไม่ได้ save)
+                    if (!btn.dataset.originalText || btn.dataset.originalText === '⏳' || btn.dataset.originalText === '🔄') {
+                        if (btn.textContent !== '⏳' && btn.textContent !== '🔄') {
+                            btn.dataset.originalText = btn.textContent;
+                        }
+                    }
                     btn.disabled = true;
                     btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -1070,19 +1100,22 @@
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
 
-        // --- เส้นทาง 1: LIFF ใน LINE + มี userId → 1-Tap Firebase ---
-        if (liffReady && liff.isInClient() && liffUserId) {
+        // --- เส้นทาง 1: มี userId แล้ว (LIFF หรือ login แล้ว) → 1-Tap Firebase ---
+        if (liffUserId) {
             try {
                 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังลงทะเบียน...'; }
-                await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
+                await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), {
+                    machine_id: machineId,
+                    subscribed_at: new Date().toISOString()
+                });
                 subscribedMachines.add(machineId);
-                saveSubscription(machineId); // persist ใน localStorage
+                saveSubscription(machineId);
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
                     btn.className = 'mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed';
                 }
-                console.log('✅ LIFF 1-Tap สำเร็จ:', machineId);
+                console.log('✅ Subscribe สำเร็จ:', machineId);
             } catch (err) {
                 console.error('❌ Firebase error:', err.code, err.message);
                 if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
@@ -1091,7 +1124,7 @@
             return;
         }
 
-        // --- เส้นทาง 2: อยู่ใน LINE แต่ไม่มี userId → Login ก่อน แล้ว auto-subscribe ---
+        // --- เส้นทาง 2: ยังไม่มี userId แต่ LIFF พร้อม → Login ก่อน ---
         if (liffReady && liff.isInClient()) {
             console.log('ℹ️ อยู่ใน LINE แต่ไม่มี userId → บันทึก pending แล้ว login');
             sessionStorage.setItem('pendingSubscribe', machineId);
@@ -1099,7 +1132,26 @@
             return;
         }
 
-        // --- เส้นทาง 3: เปิดนอก LINE → แสดง modal ---
+        // --- เส้นทาง 3: LIFF กำลัง init อยู่ → รอก่อนแล้วลองใหม่ ---
+        if (!liffReady) {
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังเชื่อมต่อ LINE...'; }
+            let waited = 0;
+            const waitForLiff = setInterval(async () => {
+                waited += 500;
+                if (liffUserId) {
+                    clearInterval(waitForLiff);
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
+                    window.notifyMe(machineId, displayName); // retry
+                } else if (waited >= 5000) {
+                    clearInterval(waitForLiff);
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
+                    showLineModal(machineId); // timeout → show modal
+                }
+            }, 500);
+            return;
+        }
+
+        // --- เส้นทาง 4: เปิดนอก LINE → แสดง modal ---
         console.log('ℹ️ เปิดนอก LINE → แสดง modal');
         showLineModal(machineId);
     };

@@ -592,18 +592,37 @@
     // ── ฟัง Firebase commands node เพื่อ disable/enable ปุ่มอัตโนมัติ ──
     onValue(ref(database, 'laundry_system/commands'), (snap) => {
         const cmds = snap.exists() ? snap.val() : {};
-        // reset ทุกปุ่มก่อน
+
+        // หา machine ที่มี pending/executing อยู่
+        const activeMachines = new Set(
+            Object.entries(cmds)
+                .filter(([, cmd]) => typeof cmd === 'object' && cmd &&
+                        ['pending','executing'].includes(cmd?.status))
+                .map(([mid]) => mid)
+        );
+
+        // reset เฉพาะปุ่มของเครื่องที่ไม่มี active command
         document.querySelectorAll('[id^="acmd-"]').forEach(btn => {
-            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-            btn.disabled = false;
-            btn.textContent = btn.dataset.originalText;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            // ดึง machineId จาก id เช่น "acmd-W1-start" → "W1"
+            const parts = btn.id.split('-');          // ['acmd','W1','start']
+            const mid = parts.length >= 3 ? parts[1] : '';
+            if (!activeMachines.has(mid)) {
+                // เครื่องนี้ไม่มี active command → reset ปุ่ม
+                if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+                if (btn.textContent === '⏳' || btn.textContent === '🔄') {
+                    btn.textContent = btn.dataset.originalText;
+                }
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         });
-        // disable ปุ่มของเครื่องที่ pending/executing + handle rejected
+
+        // disable ปุ่มของเครื่องที่ pending/executing
         Object.entries(cmds).forEach(([machineId, cmd]) => {
             if (typeof cmd !== 'object' || !cmd) return;
             if (['pending','executing'].includes(cmd?.status)) {
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
+                    if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
                     btn.disabled = true;
                     btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');

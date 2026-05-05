@@ -1131,19 +1131,17 @@ function createMachineHTML(name, info) {
         const num = name.replace(/\D/g,'');
         const isOffline = info?.is_active === false;  // API บอก network ขาด // ดึงเฉพาะตัวเลขออกมา
         
-        // Capacity: ใช้จาก Firebase (API ส่งมาจาก machineName) ถ้าไม่มีใช้ hardcode
+        // Capacity: ใช้ hardcode ตามข้อมูลจริงของร้าน
         let capacityText = "";
-        if (info?.capacity) {
-            // API ให้มา เช่น "14 kg", "9 kg"
-            capacityText = info.capacity.replace(' ', '').toUpperCase(); // "14KG"
-        } else if (isWasher && !isAqua) {
+        if (isWasher && !isAqua) {
             if (num === "1" || num === "2" || num === "3") capacityText = "15KG";
             else if (num === "4") capacityText = "10KG";
         } else if (isAqua) {
             if (num === "9") capacityText = "17KG";
             else if (num === "10") capacityText = "27KG";
         } else {
-            capacityText = machineCapacities[name] || "14KG";
+            // Dryer D5-D8 → 15KG
+            capacityText = "15KG";
         }
         
         let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);

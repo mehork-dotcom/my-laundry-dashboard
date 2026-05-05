@@ -1108,18 +1108,21 @@
 function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
         const isWasher = name.includes('W') || name.includes('เครื่องซัก');
-        const num = name.replace(/\D/g,''); // ดึงเฉพาะตัวเลขออกมา
+        const num = name.replace(/\D/g,'');
+        const isOffline = info?.is_active === false;  // API บอก network ขาด // ดึงเฉพาะตัวเลขออกมา
         
-        // Logic ใหม่: จับคู่ความจุด้วยตัวเลขลำดับเครื่อง
+        // Capacity: ใช้จาก Firebase (API ส่งมาจาก machineName) ถ้าไม่มีใช้ hardcode
         let capacityText = "";
-        if (isWasher && !isAqua) {
+        if (info?.capacity) {
+            // API ให้มา เช่น "14 kg", "9 kg"
+            capacityText = info.capacity.replace(' ', '').toUpperCase(); // "14KG"
+        } else if (isWasher && !isAqua) {
             if (num === "1" || num === "2" || num === "3") capacityText = "15KG";
             else if (num === "4") capacityText = "10KG";
         } else if (isAqua) {
             if (num === "9") capacityText = "17KG";
             else if (num === "10") capacityText = "27KG";
         } else {
-            // Dryer D5-D8 → 14KG
             capacityText = machineCapacities[name] || "14KG";
         }
         
@@ -1179,7 +1182,7 @@ function createMachineHTML(name, info) {
         // Template สำหรับ Card
         return `
             <div class="machine-card flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-50' : ''}">
-                <div class="machine-header" style="background:${statusHex}">${displayName}</div>
+                <div class="machine-header" style="background:${statusHex}">${displayName}${isOffline ? ' 📡' : ''}</div>
                 <div class="flex-grow flex flex-col items-center justify-center p-3">
                     
                     <div class="flex items-center gap-1.5 mb-2">

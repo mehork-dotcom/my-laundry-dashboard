@@ -63,7 +63,6 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             -webkit-tap-highlight-color: transparent;
             font-family: 'Noto Sans Thai', 'Sarabun', sans-serif;
-            overscroll-behavior-y: none; /* ป้องกัน Safari iOS native pull-to-refresh ชนกับ custom PTR */
         }
         .dark body, .dark { background-color: var(--bg-page) !important; color: var(--text-main) !important; }
 
@@ -592,37 +591,18 @@
     // ── ฟัง Firebase commands node เพื่อ disable/enable ปุ่มอัตโนมัติ ──
     onValue(ref(database, 'laundry_system/commands'), (snap) => {
         const cmds = snap.exists() ? snap.val() : {};
-
-        // หา machine ที่มี pending/executing อยู่
-        const activeMachines = new Set(
-            Object.entries(cmds)
-                .filter(([, cmd]) => typeof cmd === 'object' && cmd &&
-                        ['pending','executing'].includes(cmd?.status))
-                .map(([mid]) => mid)
-        );
-
-        // reset เฉพาะปุ่มของเครื่องที่ไม่มี active command
+        // reset ทุกปุ่มก่อน
         document.querySelectorAll('[id^="acmd-"]').forEach(btn => {
-            // ดึง machineId จาก id เช่น "acmd-W1-start" → "W1"
-            const parts = btn.id.split('-');          // ['acmd','W1','start']
-            const mid = parts.length >= 3 ? parts[1] : '';
-            if (!activeMachines.has(mid)) {
-                // เครื่องนี้ไม่มี active command → reset ปุ่ม
-                if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
-                if (btn.textContent === '⏳' || btn.textContent === '🔄') {
-                    btn.textContent = btn.dataset.originalText;
-                }
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+            btn.disabled = false;
+            btn.textContent = btn.dataset.originalText;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
         });
-
-        // disable ปุ่มของเครื่องที่ pending/executing
+        // disable ปุ่มของเครื่องที่ pending/executing + handle rejected
         Object.entries(cmds).forEach(([machineId, cmd]) => {
             if (typeof cmd !== 'object' || !cmd) return;
             if (['pending','executing'].includes(cmd?.status)) {
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
-                    if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
                     btn.disabled = true;
                     btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -1128,10 +1108,9 @@
 function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
         const isWasher = name.includes('W') || name.includes('เครื่องซัก');
-        const num = name.replace(/\D/g,'');
-        const isOffline = info?.is_active === false;  // API บอก network ขาด // ดึงเฉพาะตัวเลขออกมา
+        const num = name.replace(/\D/g,''); // ดึงเฉพาะตัวเลขออกมา
         
-        // Capacity: ใช้ hardcode ตามข้อมูลจริงของร้าน
+        // Logic ใหม่: จับคู่ความจุด้วยตัวเลขลำดับเครื่อง
         let capacityText = "";
         if (isWasher && !isAqua) {
             if (num === "1" || num === "2" || num === "3") capacityText = "15KG";
@@ -1140,8 +1119,8 @@ function createMachineHTML(name, info) {
             if (num === "9") capacityText = "17KG";
             else if (num === "10") capacityText = "27KG";
         } else {
-            // Dryer D5-D8 → 15KG
-            capacityText = "15KG";
+            // Dryer D5-D8 → 14KG
+            capacityText = machineCapacities[name] || "14KG";
         }
         
         let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);
@@ -1200,7 +1179,7 @@ function createMachineHTML(name, info) {
         // Template สำหรับ Card
         return `
             <div class="machine-card flex flex-col ${cardHeight} ${(!info || info.status?.toLowerCase() === 'offline') ? 'opacity-50' : ''}">
-                <div class="machine-header" style="background:${statusHex}">${displayName}${isOffline ? ' 📡' : ''}</div>
+                <div class="machine-header" style="background:${statusHex}">${displayName}</div>
                 <div class="flex-grow flex flex-col items-center justify-center p-3">
                     
                     <div class="flex items-center gap-1.5 mb-2">

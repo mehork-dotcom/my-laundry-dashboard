@@ -70,7 +70,7 @@
         .glass-card {
             backdrop-filter: blur(12px);
             background: rgba(253, 250, 247, 0.94) !important;
-            border-bottom: 1px solid var(--border) !important;
+            border-bottom: 3px solid var(--border) !important;
             box-shadow: 0 1px 0 rgba(119,51,59,0.08) !important;
         }
         .dark .glass-card {
@@ -598,14 +598,25 @@
             btn.textContent = btn.dataset.originalText;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
         });
-        // disable ปุ่มของเครื่องที่ pending/executing
+        // disable ปุ่มของเครื่องที่ pending/executing + handle rejected
         Object.entries(cmds).forEach(([machineId, cmd]) => {
-            if (typeof cmd === 'object' && ['pending','executing'].includes(cmd?.status)) {
+            if (typeof cmd !== 'object' || !cmd) return;
+            if (['pending','executing'].includes(cmd?.status)) {
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
                     btn.disabled = true;
                     btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
                 });
+            }
+            // rejected → reset ปุ่มทันที + แจ้ง user
+            if (cmd?.status === 'rejected') {
+                document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
+                    btn.disabled = false;
+                    btn.textContent = btn.dataset.originalText || btn.textContent;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+                const reason = cmd.reject_reason || 'ไม่ได้รับอนุญาต';
+                showToast(`🚫 คำสั่งถูกปฏิเสธ: ${reason}`, '❌', 5000);
             }
         });
     });
@@ -835,7 +846,6 @@
         const displayName = machineId.startsWith('W') ? `เครื่องซัก ${num}` :
                             machineId.startsWith('D') ? `เครื่องอบ ${num}` : machineId;
 
-        // ป้องกัน start_dryer_time ถ้าผู้ใช้กด Cancel บน prompt
         if (action === 'start_dryer_time' && (!extraParams.minutes || extraParams.minutes === 'null')) return;
 
         const confirmed = await window.showConfirmModal(
@@ -852,7 +862,7 @@
                 action, status: 'pending',
                 params: Object.keys(extraParams).length ? extraParams : null,
                 requested_at: new Date().toISOString(),
-                requested_by: liffUserId || 'admin'
+                requested_by: liffUserId || 'admin'   // scraper จะ verify ว่าอยู่ใน admin_users
             });
             showToast(`${label} → ${displayName} ส่งคำสั่งแล้วครับ`, '✅', 3000);
         } catch(e) {

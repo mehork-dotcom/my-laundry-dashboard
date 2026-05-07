@@ -322,102 +322,6 @@
                     </div>
                 </div>
             </div>
-            <!-- ── Pricing & Settings ── -->
-            <div class="mt-8">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="text-xs font-black uppercase tracking-widest" style="color:var(--text-sub)">⚙️ ตั้งค่าราคาและสมาชิก</div>
-                    <button id="pricing-toggle-btn" onclick="togglePricingSection()"
-                        class="text-xs px-3 py-1.5 rounded-lg" style="background:var(--brand);color:white">
-                        ▼ แสดง
-                    </button>
-                </div>
-
-                <div id="pricing-section" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                    <!-- Pricing: Washer programs -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border" style="border-color:var(--border)">
-                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">💧 ราคาเครื่องซัก (Washer)</div>
-                        <div id="pricing-washer" class="space-y-3">
-                            <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด...</div>
-                        </div>
-                    </div>
-
-                    <!-- Pricing: Dryer + AQUA -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border" style="border-color:var(--border)">
-                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">🌀 ราคาเครื่องอบ (Dryer)</div>
-                        <div id="pricing-dryer" class="space-y-3 mb-4">
-                            <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด...</div>
-                        </div>
-                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">✨ ราคาเครื่องซัก-อบ (AQUA)</div>
-                        <div id="pricing-aqua" class="space-y-3">
-                            <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด...</div>
-                        </div>
-                    </div>
-
-                    <!-- Member Settings -->
-                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border" style="border-color:var(--border)">
-                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">🎁 ระบบสมาชิก</div>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">อัตราสะสมแต้ม</label>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs" style="color:var(--text-muted)">฿</span>
-                                    <input id="setting-points-rate" type="number" min="1" value="10"
-                                        class="w-16 text-sm px-2 py-1 rounded-lg border" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
-                                    <span class="text-xs" style="color:var(--text-muted)">= 1 แต้ม</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">ส่วนลดสมาชิกใหม่ (ครั้งแรก)</label>
-                                <div class="flex items-center gap-2">
-                                    <input id="setting-newuser-discount" type="number" min="0" max="100" value="10"
-                                        class="w-16 text-sm px-2 py-1 rounded-lg border" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
-                                    <span class="text-xs" style="color:var(--text-muted)">%</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">ฟรี 1 ครั้ง ทุก ๆ N ครั้ง</label>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs" style="color:var(--text-muted)">ทุก</span>
-                                    <input id="setting-loyalty-every" type="number" min="2" value="10"
-                                        class="w-16 text-sm px-2 py-1 rounded-lg border" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
-                                    <span class="text-xs" style="color:var(--text-muted)">ครั้ง</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">โปรแกรมที่ฟรี</label>
-                                <select id="setting-loyalty-program" class="w-full text-sm px-2 py-1 rounded-lg border"
-                                    style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)">
-                                    <option value="dryer-single">เครื่องอบ 15kg (D5-D8) ฿50</option>
-                                    <option value="washer-cold">เครื่องซัก Cold (W1-W4)</option>
-                                    <option value="washer-warm">เครื่องซัก Warm (W1-W4)</option>
-                                    <option value="washer-hot">เครื่องซัก Hot (W1-W4)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">อัตราแลกแต้มเป็นส่วนลด</label>
-                                <div class="flex items-center gap-2">
-                                    <input id="setting-redeem-points" type="number" min="1" value="100"
-                                        class="w-16 text-sm px-2 py-1 rounded-lg border" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
-                                    <span class="text-xs" style="color:var(--text-muted)">แต้ม = ฿</span>
-                                    <input id="setting-redeem-baht" type="number" min="1" value="50"
-                                        class="w-16 text-sm px-2 py-1 rounded-lg border" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
-                                </div>
-                            </div>
-
-                            <button onclick="saveMemberSettings()"
-                                class="w-full mt-2 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">
-                                💾 บันทึกการตั้งค่าสมาชิก
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
 
         <!-- USER MACHINES: mobile=stacked, desktop=3 cols -->
@@ -456,7 +360,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
     const firebaseConfig = { databaseURL: "https://laundry-vending-system-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     const app = initializeApp(firebaseConfig);
@@ -603,7 +507,7 @@
         // แสดง/ซ่อน logout button
         const logoutBtn = document.getElementById('admin-logout-btn');
         if (logoutBtn) logoutBtn.classList.toggle('hidden', !isAdmin);
-        if (isAdmin) { loadAdminStats(); loadAdminUsers(); loadPricing(); loadMemberSettings(); }
+        if (isAdmin) { loadAdminStats(); loadAdminUsers(); }
         render();
     }
 
@@ -687,18 +591,44 @@
     // ── ฟัง Firebase commands node เพื่อ disable/enable ปุ่มอัตโนมัติ ──
     onValue(ref(database, 'laundry_system/commands'), (snap) => {
         const cmds = snap.exists() ? snap.val() : {};
-        // reset ทุกปุ่มก่อน
+
+        // หา machine ที่มี active command (pending/executing)
+        const activeMachines = new Set(
+            Object.entries(cmds)
+                .filter(([, cmd]) => typeof cmd === 'object' && cmd &&
+                        ['pending','executing'].includes(cmd?.status))
+                .map(([mid]) => mid)
+        );
+
+        // reset เฉพาะปุ่มของเครื่องที่ไม่มี active command
+        // (ไม่ reset ทุกปุ่ม เพราะจะ overwrite originalText ด้วย ⏳)
         document.querySelectorAll('[id^="acmd-"]').forEach(btn => {
-            if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+            const mid = btn.id.split('-')[1]; // "acmd-W1-start" → "W1"
+            if (activeMachines.has(mid)) return;
+
+            // save originalText เฉพาะครั้งแรก และเฉพาะเมื่อไม่ใช่ ⏳/🔄
+            const cur = btn.textContent;
+            if (cur !== '⏳' && cur !== '🔄') {
+                btn.dataset.originalText = cur;
+            }
+            // reset ถ้าเป็น ⏳/🔄 อยู่
+            if (cur === '⏳' || cur === '🔄') {
+                btn.textContent = btn.dataset.originalText || cur;
+            }
             btn.disabled = false;
-            btn.textContent = btn.dataset.originalText;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
         });
-        // disable ปุ่มของเครื่องที่ pending/executing + handle rejected
+
+        // disable ปุ่มของเครื่องที่ pending/executing
         Object.entries(cmds).forEach(([machineId, cmd]) => {
             if (typeof cmd !== 'object' || !cmd) return;
             if (['pending','executing'].includes(cmd?.status)) {
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
+                    // save originalText ก่อน disable
+                    const cur = btn.textContent;
+                    if (cur !== '⏳' && cur !== '🔄') {
+                        btn.dataset.originalText = cur;
+                    }
                     btn.disabled = true;
                     btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -711,8 +641,7 @@
                     btn.textContent = btn.dataset.originalText || btn.textContent;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 });
-                const reason = cmd.reject_reason || 'ไม่ได้รับอนุญาต';
-                showToast(`🚫 คำสั่งถูกปฏิเสธ: ${reason}`, '❌', 5000);
+                showToast(`🚫 คำสั่งถูกปฏิเสธ: ${cmd.reject_reason || 'ไม่ได้รับอนุญาต'}`, '❌', 5000);
             }
         });
     });
@@ -968,191 +897,6 @@
     };
 
     // ============================================================
-    // PRICING SYSTEM — ตั้งราคาแต่ละเครื่อง/program
-    // ============================================================
-    const DEFAULT_PRICING = {
-        // Washer: ราคา cold/warm/hot
-        W1: { cold: 60, warm: 70, hot: 70, label: 'เครื่องซัก 1 (15kg)' },
-        W2: { cold: 60, warm: 70, hot: 70, label: 'เครื่องซัก 2 (15kg)' },
-        W3: { cold: 60, warm: 70, hot: 70, label: 'เครื่องซัก 3 (15kg)' },
-        W4: { cold: 50, warm: 60, hot: 60, label: 'เครื่องซัก 4 (10kg)' },
-        // Dryer: ราคาเดียว
-        D5: { single: 50, label: 'เครื่องอบ 5 (15kg)' },
-        D6: { single: 50, label: 'เครื่องอบ 6 (15kg)' },
-        D7: { single: 50, label: 'เครื่องอบ 7 (15kg)' },
-        D8: { single: 50, label: 'เครื่องอบ 8 (15kg)' },
-        // AQUA: 4 programs
-        AQUA9:  { p1: 100, p2: 120, p3: 140, p4: 160, label: 'AQUA 9 (17kg)' },
-        AQUA10: { p1: 120, p2: 140, p3: 160, p4: 180, label: 'AQUA 10 (27kg)' },
-    };
-
-    let _currentPricing = {};
-
-    window.togglePricingSection = function() {
-        const sec = document.getElementById('pricing-section');
-        const btn = document.getElementById('pricing-toggle-btn');
-        sec.classList.toggle('hidden');
-        btn.textContent = sec.classList.contains('hidden') ? '▼ แสดง' : '▲ ซ่อน';
-    };
-
-    async function loadPricing() {
-        try {
-            const snap = await get(ref(database, 'laundry_system/pricing'));
-            _currentPricing = snap.exists() ? snap.val() : {};
-            // เติม default สำหรับเครื่องที่ยังไม่มีใน Firebase
-            Object.keys(DEFAULT_PRICING).forEach(mid => {
-                if (!_currentPricing[mid]) _currentPricing[mid] = { ...DEFAULT_PRICING[mid] };
-            });
-            renderPricing();
-        } catch(e) {
-            console.error('loadPricing error:', e);
-            _currentPricing = JSON.parse(JSON.stringify(DEFAULT_PRICING));
-            renderPricing();
-        }
-    }
-
-    function renderPricing() {
-        const washerEl = document.getElementById('pricing-washer');
-        const dryerEl  = document.getElementById('pricing-dryer');
-        const aquaEl   = document.getElementById('pricing-aqua');
-        if (!washerEl) return;
-
-        const inputCls = 'w-16 text-sm px-2 py-1 rounded-lg border text-center';
-        const inputStyle = 'border-color:var(--border);background:var(--bg-page);color:var(--text-main)';
-
-        // Washer (W1-W4) — 3 programs each
-        washerEl.innerHTML = ['W1','W2','W3','W4'].map(mid => {
-            const p = _currentPricing[mid] || DEFAULT_PRICING[mid];
-            return `
-            <div class="border-b pb-3" style="border-color:var(--border)">
-                <div class="text-xs font-semibold mb-2" style="color:var(--text-main)">${p.label}</div>
-                <div class="grid grid-cols-3 gap-2">
-                    <div class="text-center">
-                        <div class="text-[10px] mb-1" style="color:var(--text-muted)">❄️ Cold</div>
-                        <input data-mid="${mid}" data-program="cold" type="number" min="0" value="${p.cold}" class="${inputCls}" style="${inputStyle}"/>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-[10px] mb-1" style="color:var(--text-muted)">🌤 Warm</div>
-                        <input data-mid="${mid}" data-program="warm" type="number" min="0" value="${p.warm}" class="${inputCls}" style="${inputStyle}"/>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-[10px] mb-1" style="color:var(--text-muted)">🔥 Hot</div>
-                        <input data-mid="${mid}" data-program="hot" type="number" min="0" value="${p.hot}" class="${inputCls}" style="${inputStyle}"/>
-                    </div>
-                </div>
-            </div>`;
-        }).join('') + `
-            <button onclick="savePricing('washer')" class="w-full mt-2 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">
-                💾 บันทึกราคา Washer
-            </button>`;
-
-        // Dryer (D5-D8) — single price
-        dryerEl.innerHTML = ['D5','D6','D7','D8'].map(mid => {
-            const p = _currentPricing[mid] || DEFAULT_PRICING[mid];
-            return `
-            <div class="flex items-center justify-between gap-2">
-                <span class="text-xs" style="color:var(--text-main)">${p.label}</span>
-                <div class="flex items-center gap-1">
-                    <span class="text-xs" style="color:var(--text-muted)">฿</span>
-                    <input data-mid="${mid}" data-program="single" type="number" min="0" value="${p.single}" class="${inputCls}" style="${inputStyle}"/>
-                </div>
-            </div>`;
-        }).join('') + `
-            <button onclick="savePricing('dryer')" class="w-full mt-2 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">
-                💾 บันทึกราคา Dryer
-            </button>`;
-
-        // AQUA — 4 programs each
-        aquaEl.innerHTML = ['AQUA9','AQUA10'].map(mid => {
-            const p = _currentPricing[mid] || DEFAULT_PRICING[mid];
-            return `
-            <div class="border-b pb-3" style="border-color:var(--border)">
-                <div class="text-xs font-semibold mb-2" style="color:var(--text-main)">${p.label}</div>
-                <div class="grid grid-cols-4 gap-2">
-                    ${['p1','p2','p3','p4'].map(prog => `
-                    <div class="text-center">
-                        <div class="text-[10px] mb-1" style="color:var(--text-muted)">${prog.toUpperCase()}</div>
-                        <input data-mid="${mid}" data-program="${prog}" type="number" min="0" value="${p[prog]}" class="${inputCls}" style="${inputStyle}"/>
-                    </div>`).join('')}
-                </div>
-            </div>`;
-        }).join('') + `
-            <button onclick="savePricing('aqua')" class="w-full mt-2 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">
-                💾 บันทึกราคา AQUA
-            </button>`;
-    }
-
-    window.savePricing = async function(group) {
-        // กรอง machine ตาม group
-        const groupMap = {
-            washer: ['W1','W2','W3','W4'],
-            dryer:  ['D5','D6','D7','D8'],
-            aqua:   ['AQUA9','AQUA10'],
-        };
-        const machines = groupMap[group] || [];
-        const updates = {};
-        machines.forEach(mid => {
-            const inputs = document.querySelectorAll(`input[data-mid="${mid}"]`);
-            const data = { label: _currentPricing[mid]?.label || DEFAULT_PRICING[mid].label };
-            inputs.forEach(inp => {
-                data[inp.dataset.program] = Number(inp.value) || 0;
-            });
-            updates[mid] = data;
-            _currentPricing[mid] = data;
-        });
-        try {
-            await update(ref(database, 'laundry_system/pricing'), updates);
-            showToast(`✅ บันทึกราคา ${group.toUpperCase()} แล้ว`, '💾', 3000);
-        } catch(e) {
-            showToast(`❌ บันทึกไม่ได้: ${e.message}`, '⚠️', 4000);
-        }
-    };
-
-    // ============================================================
-    // MEMBER SETTINGS
-    // ============================================================
-    const DEFAULT_MEMBER_SETTINGS = {
-        points_rate: 10,           // ฿10 = 1 แต้ม
-        newuser_discount: 10,      // 10% ครั้งแรก
-        loyalty_every: 10,         // ทุก 10 ครั้งฟรี 1
-        loyalty_program: 'dryer-single',
-        redeem_points: 100,        // 100 แต้ม = ฿50
-        redeem_baht: 50,
-    };
-
-    async function loadMemberSettings() {
-        try {
-            const snap = await get(ref(database, 'laundry_system/settings/members'));
-            const s = snap.exists() ? snap.val() : DEFAULT_MEMBER_SETTINGS;
-            document.getElementById('setting-points-rate').value = s.points_rate ?? 10;
-            document.getElementById('setting-newuser-discount').value = s.newuser_discount ?? 10;
-            document.getElementById('setting-loyalty-every').value = s.loyalty_every ?? 10;
-            document.getElementById('setting-loyalty-program').value = s.loyalty_program ?? 'dryer-single';
-            document.getElementById('setting-redeem-points').value = s.redeem_points ?? 100;
-            document.getElementById('setting-redeem-baht').value = s.redeem_baht ?? 50;
-        } catch(e) {
-            console.error('loadMemberSettings error:', e);
-        }
-    }
-
-    window.saveMemberSettings = async function() {
-        const settings = {
-            points_rate:      Number(document.getElementById('setting-points-rate').value) || 10,
-            newuser_discount: Number(document.getElementById('setting-newuser-discount').value) || 0,
-            loyalty_every:    Number(document.getElementById('setting-loyalty-every').value) || 10,
-            loyalty_program:  document.getElementById('setting-loyalty-program').value,
-            redeem_points:    Number(document.getElementById('setting-redeem-points').value) || 100,
-            redeem_baht:      Number(document.getElementById('setting-redeem-baht').value) || 50,
-        };
-        try {
-            await set(ref(database, 'laundry_system/settings/members'), settings);
-            showToast('✅ บันทึกการตั้งค่าสมาชิกแล้ว', '🎁', 3000);
-        } catch(e) {
-            showToast(`❌ ${e.message}`, '⚠️', 4000);
-        }
-    };
-
-    // ============================================================
     // Admin Machine Card — ใช้ user card เหมือนกันทุกอย่าง + ปุ่มควบคุม
     // Desktop (lg): card ซ้าย | ปุ่มขวา
     // Mobile: card บน / ปุ่ม 4-col ล่าง
@@ -1351,19 +1095,24 @@
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
 
-        // --- เส้นทาง 1: LIFF ใน LINE + มี userId → 1-Tap Firebase ---
-        if (liffReady && liff.isInClient() && liffUserId) {
+        // --- เส้นทาง 1: มี userId แล้ว (ไม่ว่าจะมาจากทาง ใด) → 1-Tap Firebase ---
+        // ตรวจ liffUserId ก่อน isInClient() เพราะ isInClient() อาจ return false
+        // แม้กำลังเปิดอยู่ใน LINE ถ้า LIFF init ยังไม่เสร็จ 100%
+        if (liffUserId) {
             try {
                 if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังลงทะเบียน...'; }
-                await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), true);
+                await set(ref(database, `laundry_system/subscriptions/${machineId}/${liffUserId}`), {
+                    machine_id: machineId,
+                    subscribed_at: new Date().toISOString()
+                });
                 subscribedMachines.add(machineId);
-                saveSubscription(machineId); // persist ใน localStorage
+                saveSubscription(machineId);
                 if (btn) {
                     btn.disabled = true;
                     btn.innerHTML = '✅ ลงทะเบียนแล้ว!';
                     btn.className = 'mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed';
                 }
-                console.log('✅ LIFF 1-Tap สำเร็จ:', machineId);
+                console.log('✅ 1-Tap subscribe สำเร็จ:', machineId);
             } catch (err) {
                 console.error('❌ Firebase error:', err.code, err.message);
                 if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
@@ -1372,16 +1121,35 @@
             return;
         }
 
-        // --- เส้นทาง 2: อยู่ใน LINE แต่ไม่มี userId → Login ก่อน แล้ว auto-subscribe ---
+        // --- เส้นทาง 2: LIFF พร้อม + อยู่ใน LINE แต่ยังไม่ login → login ก่อน ---
         if (liffReady && liff.isInClient()) {
-            console.log('ℹ️ อยู่ใน LINE แต่ไม่มี userId → บันทึก pending แล้ว login');
+            console.log('ℹ️ อยู่ใน LINE แต่ไม่มี userId → login');
             sessionStorage.setItem('pendingSubscribe', machineId);
             liff.login();
             return;
         }
 
-        // --- เส้นทาง 3: เปิดนอก LINE → แสดง modal ---
-        console.log('ℹ️ เปิดนอก LINE → แสดง modal');
+        // --- เส้นทาง 3: LIFF ยังไม่ ready → รอ 5 วินาที แล้ว retry ---
+        if (!liffReady) {
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ เชื่อมต่อ LINE...'; }
+            let waited = 0;
+            const waitInterval = setInterval(async () => {
+                waited += 500;
+                if (liffUserId) {
+                    clearInterval(waitInterval);
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
+                    window.notifyMe(machineId, displayName); // retry
+                } else if (waited >= 5000) {
+                    clearInterval(waitInterval);
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🔔 แจ้งเตือนฉัน'; }
+                    showLineModal(machineId); // timeout → fallback modal
+                }
+            }, 500);
+            return;
+        }
+
+        // --- เส้นทาง 4: เปิดนอก LINE → แสดง modal ---
+        console.log('ℹ️ เปิดนอก LINE → modal');
         showLineModal(machineId);
     };
 
@@ -1390,29 +1158,7 @@ function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
         const isWasher = name.includes('W') || name.includes('เครื่องซัก');
         const num = name.replace(/\D/g,''); // ดึงเฉพาะตัวเลขออกมา
-
-        // ── Server Down: W/D เครื่องเปลี่ยนเป็น LOADING + Server connecting ──
-        // (AQUA ยังคง offline ตามปกติ — ไม่เกี่ยวกับ ipsoconnect)
-        if (typeof serverDown !== 'undefined' && serverDown && !isAqua) {
-            const displayName = isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`;
-            const cardHeight = 'min-h-[13rem]';
-            return `
-            <div class="machine-card flex flex-col ${cardHeight} opacity-70">
-                <div class="machine-header" style="background:#9A9490">${displayName}</div>
-                <div class="flex-grow flex flex-col items-center justify-center p-3">
-                    <div class="relative w-16 h-16 mb-2">
-                        <svg viewBox="0 0 50 50" class="w-full h-full animate-spin" style="animation-duration:2s">
-                            <circle cx="25" cy="25" r="20" stroke="#9A9490" stroke-width="4" fill="transparent" opacity="0.2"/>
-                            <circle cx="25" cy="25" r="20" stroke="#9A9490" stroke-width="4" fill="transparent"
-                                stroke-dasharray="30 100" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                    <div class="text-[11px] font-bold tracking-wider mb-1" style="color:#9A9490">LOADING</div>
-                    <div class="text-[10px] mt-0.5" style="color:var(--text-muted)">Server connecting...</div>
-                </div>
-            </div>`;
-        }
-
+        
         // Logic ใหม่: จับคู่ความจุด้วยตัวเลขลำดับเครื่อง
         let capacityText = "";
         if (isWasher && !isAqua) {
@@ -1582,16 +1328,9 @@ function createMachineHTML(name, info) {
             else if (info.status?.toLowerCase() === 'complete') stats.done++;
             else stats.ready++;
         });
-        // Server down → แสดง -- แทนตัวเลข
-        if (typeof serverDown !== 'undefined' && serverDown) {
-            document.getElementById('stat-ready').innerText = '--';
-            document.getElementById('stat-busy').innerText  = '--';
-            document.getElementById('stat-done').innerText  = '--';
-        } else {
-            document.getElementById('stat-ready').innerText = stats.ready;
-            document.getElementById('stat-busy').innerText  = stats.busy;
-            document.getElementById('stat-done').innerText  = stats.done;
-        }
+        document.getElementById('stat-ready').innerText = stats.ready;
+        document.getElementById('stat-busy').innerText = stats.busy;
+        document.getElementById('stat-done').innerText = stats.done;
     }
 
     // อ่าน machines — path ที่มีสิทธิ์อ่าน
@@ -1647,8 +1386,6 @@ function createMachineHTML(name, info) {
     });
 
     let lastSyncTime = null;
-    let serverDown   = false;       // ตอนนี้ server เชื่อมต่อไม่ได้อยู่ไหม
-    const STALE_THRESHOLD = 600;    // 10 นาที = 600 วินาที
 
     onValue(ref(database, 'laundry_system/last_sync'), (snap) => {
         const lastSync = snap.val();
@@ -1664,48 +1401,12 @@ function createMachineHTML(name, info) {
     function updateRelativeTime() {
         if (!lastSyncTime) return;
         const diff = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
-        const wasDown = serverDown;
-        const isDown  = diff > STALE_THRESHOLD;
-
-        // ── Render text ────────────────────────────────────────
         let text;
-        if (isDown) {
-            const mins = Math.floor(diff / 60);
-            text = `⚠️ ไม่สามารถเชื่อมต่อ Server ได้ (${mins} นาที)`;
-        } else if (diff < 60) {
-            text = 'อัปเดตเมื่อสักครู่';
-        } else if (diff < 3600) {
-            text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
-        } else {
-            text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้ว`;
-        }
+        if (diff < 60) text = 'อัปเดตเมื่อสักครู่';
+        else if (diff < 3600) text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
+        else text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้ว`;
         const el = document.getElementById('last-sync-display');
-        if (el) {
-            el.innerText = text;
-            el.style.color = isDown ? '#ef4444' : '';
-            el.style.fontWeight = isDown ? '700' : '';
-        }
-
-        // ── Status dot: เขียว → แดง เมื่อ server down ──────────
-        const dot = document.getElementById('status-dot');
-        if (dot) {
-            dot.classList.toggle('bg-emerald-500', !isDown);
-            dot.classList.toggle('bg-red-500',     isDown);
-            dot.classList.toggle('animate-pulse',  isDown);
-        }
-
-        // ── Trigger UI update เมื่อ state เปลี่ยน ─────────────
-        if (wasDown !== isDown) {
-            serverDown = isDown;
-            // re-render machines เพื่อแสดง offline state
-            if (typeof render === 'function') render();
-            // แจ้ง toast เมื่อระบบกลับมา
-            if (wasDown && !isDown) {
-                showToast('✅ ระบบกลับมาเชื่อมต่อ Server ได้แล้ว', '🔌', 5000);
-            } else if (!wasDown && isDown) {
-                showToast('⚠️ ระบบไม่สามารถเชื่อมต่อ Server ได้', '🔴', 6000);
-            }
-        }
+        if (el) el.innerText = text;
     }
 
     // อัปเดต relative time ทุก 30 วินาที

@@ -1320,49 +1320,6 @@
         } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
     };
 
-    // ══════════════════════════════════════════════════════════
-    // SERVER-DOWN DETECTION
-    // ══════════════════════════════════════════════════════════
-    let lastSyncTime = null;
-    let serverDown   = false;
-    const STALE_THRESHOLD = 600; // 10 นาที
-
-    onValue(ref(database,'laundry_system/last_sync'), (snap) => {
-        if (snap.val()) {
-            lastSyncTime = new Date(snap.val().replace(' ','T') + '+07:00');
-            updateRelativeTime();
-        }
-    });
-
-    function updateRelativeTime() {
-        if (!lastSyncTime) return;
-        const diff = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
-        const wasDown = serverDown;
-        serverDown = diff > STALE_THRESHOLD;
-        let text;
-        if (serverDown) {
-            text = `⚠️ ไม่สามารถเชื่อมต่อ Server ได้ (${Math.floor(diff/60)} นาที)`;
-        } else if (diff < 60) { text = 'อัปเดตเมื่อสักครู่';
-        } else if (diff < 3600) { text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
-        } else { text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้`; }
-
-        const el = document.getElementById('last-sync-display');
-        if (el) { el.innerText = text; el.style.color = serverDown ? '#ef4444' : ''; el.style.fontWeight = serverDown ? '700' : ''; }
-
-        const dot = document.getElementById('status-dot');
-        if (dot) {
-            dot.classList.toggle('bg-emerald-500', !serverDown);
-            dot.classList.toggle('bg-red-500',  serverDown);
-            dot.classList.toggle('animate-pulse', serverDown);
-        }
-        if (wasDown !== serverDown) {
-            if (typeof render === 'function') render();
-            showToast(serverDown ? '⚠️ ระบบไม่สามารถเชื่อมต่อ Server ได้' : '✅ ระบบกลับมาเชื่อมต่อ Server ได้แล้ว',
-                serverDown ? '🔴' : '✅', serverDown ? 6000 : 5000);
-        }
-    }
-    setInterval(updateRelativeTime, 30000);
-
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
 
@@ -1675,11 +1632,12 @@ function createMachineHTML(name, info) {
     });
 
     let lastSyncTime = null;
+    let serverDown   = false;
+    const STALE_SECS = 600; // 10 นาที
 
     onValue(ref(database, 'laundry_system/last_sync'), (snap) => {
         const lastSync = snap.val();
         if (lastSync) {
-            // แปลง "2026-05-01 14:35:00" → Date object
             lastSyncTime = new Date(lastSync.replace(' ', 'T') + '+07:00');
             updateRelativeTime();
         }
@@ -1690,12 +1648,36 @@ function createMachineHTML(name, info) {
     function updateRelativeTime() {
         if (!lastSyncTime) return;
         const diff = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
+        const wasDown = serverDown;
+        serverDown = diff > STALE_SECS;
+
         let text;
-        if (diff < 60) text = 'อัปเดตเมื่อสักครู่';
+        if (serverDown) text = `⚠️ ไม่สามารถเชื่อมต่อ Server ได้ (${Math.floor(diff/60)} นาที)`;
+        else if (diff < 60) text = 'อัปเดตเมื่อสักครู่';
         else if (diff < 3600) text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
         else text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้ว`;
+
         const el = document.getElementById('last-sync-display');
-        if (el) el.innerText = text;
+        if (el) {
+            el.innerText = text;
+            el.style.color = serverDown ? '#ef4444' : '';
+            el.style.fontWeight = serverDown ? '700' : '';
+        }
+        const dot = document.getElementById('status-dot');
+        if (dot) {
+            dot.classList.toggle('bg-emerald-500', !serverDown);
+            dot.classList.toggle('bg-red-500', serverDown);
+            dot.classList.toggle('animate-pulse', serverDown);
+        }
+        if (wasDown !== serverDown) {
+            if (typeof render === 'function') render();
+            showToast(
+                serverDown ? '⚠️ ระบบไม่สามารถเชื่อมต่อ Server ได้'
+                           : '✅ ระบบกลับมาเชื่อมต่อ Server ได้แล้ว',
+                serverDown ? '🔴' : '✅',
+                serverDown ? 6000 : 5000
+            );
+        }
     }
 
     // อัปเดต relative time ทุก 30 วินาที

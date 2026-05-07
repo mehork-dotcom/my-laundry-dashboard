@@ -623,15 +623,23 @@
         Object.entries(cmds).forEach(([machineId, cmd]) => {
             if (typeof cmd !== 'object' || !cmd) return;
             if (['pending','executing'].includes(cmd?.status)) {
+                const activeAction = cmd.action || '';   // action ที่กำลัง execute
                 document.querySelectorAll(`[id^="acmd-${machineId}-"]`).forEach(btn => {
-                    // save originalText ก่อน disable
-                    const cur = btn.textContent;
-                    if (cur !== '⏳' && cur !== '🔄') {
-                        btn.dataset.originalText = cur;
+                    // save originalText ก่อน disable (ถ้ายังไม่ได้ save)
+                    if (btn.textContent !== '⏳' && btn.textContent !== '🔄') {
+                        btn.dataset.originalText = btn.textContent;
                     }
                     btn.disabled = true;
-                    btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
                     btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                    // แสดง ⏳ เฉพาะปุ่มที่ถูกกด (action ตรงกัน)
+                    // ปุ่มอื่นในเครื่องเดียวกัน: disabled แต่แสดงชื่อปุ่มเดิม
+                    const btnAction = btn.id.replace(`acmd-${machineId}-`, '');
+                    if (btnAction === activeAction) {
+                        btn.textContent = cmd.status === 'pending' ? '⏳' : '🔄';
+                    } else {
+                        btn.textContent = btn.dataset.originalText || btn.textContent;
+                    }
                 });
             }
             // rejected → reset ปุ่มทันที + แจ้ง user

@@ -322,6 +322,99 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ── M1: Pricing & Member Settings ── -->
+            <div class="mt-8">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs font-black uppercase tracking-widest" style="color:var(--text-sub)">⚙️ ตั้งค่าราคาและสมาชิก</div>
+                    <button id="pricing-toggle-btn" onclick="togglePricingSection()"
+                        class="text-xs px-3 py-1.5 rounded-lg font-bold" style="background:var(--brand);color:white">
+                        ▼ แสดง
+                    </button>
+                </div>
+                <div id="pricing-section" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                    <!-- Washer pricing -->
+                    <div class="rounded-2xl p-4 shadow-sm border" style="background:var(--bg-card);border-color:var(--border)">
+                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">💧 ราคาเครื่องซัก (Washer)</div>
+                        <div id="pricing-washer" class="space-y-3">
+                            <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด...</div>
+                        </div>
+                    </div>
+
+                    <!-- Dryer + AQUA pricing -->
+                    <div class="rounded-2xl p-4 shadow-sm border" style="background:var(--bg-card);border-color:var(--border)">
+                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">🌀 ราคาเครื่องอบ (Dryer)</div>
+                        <div id="pricing-dryer" class="space-y-2 mb-4"></div>
+                        <div class="text-sm font-bold mb-3 mt-4" style="color:var(--text-main)">✨ เครื่องซัก-อบ (AQUA)</div>
+                        <div id="pricing-aqua" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Member settings -->
+                    <div class="rounded-2xl p-4 shadow-sm border" style="background:var(--bg-card);border-color:var(--border)">
+                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">🎁 ระบบสมาชิก</div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">อัตราสะสมแต้ม</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs" style="color:var(--text-muted)">฿</span>
+                                    <input id="setting-points-rate" type="number" min="1" value="10"
+                                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                    <span class="text-xs" style="color:var(--text-muted)">= 1 แต้ม</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">ส่วนลดสมาชิกใหม่</label>
+                                <div class="flex items-center gap-2">
+                                    <input id="setting-newuser-discount" type="number" min="0" max="100" value="10"
+                                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                    <span class="text-xs" style="color:var(--text-muted)">% (ครั้งแรก)</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">ฟรี 1 ครั้ง ทุก N ครั้ง</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs" style="color:var(--text-muted)">ทุก</span>
+                                    <input id="setting-loyalty-every" type="number" min="2" value="10"
+                                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                    <span class="text-xs" style="color:var(--text-muted)">ครั้ง</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">โปรแกรมที่ฟรี</label>
+                                <select id="setting-loyalty-program" class="w-full text-sm px-2 py-1 rounded-lg border"
+                                    style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)">
+                                    <option value="dryer-single">เครื่องอบ 15kg (D5-D8) ฿50</option>
+                                    <option value="washer-cold">เครื่องซัก Cold</option>
+                                    <option value="washer-warm">เครื่องซัก Warm</option>
+                                    <option value="washer-hot">เครื่องซัก Hot</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold mb-1 block" style="color:var(--text-sub)">แลกแต้มเป็นส่วนลด</label>
+                                <div class="flex items-center gap-2">
+                                    <input id="setting-redeem-points" type="number" min="1" value="100"
+                                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                    <span class="text-xs" style="color:var(--text-muted)">แต้ม = ฿</span>
+                                    <input id="setting-redeem-baht" type="number" min="1" value="50"
+                                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                </div>
+                            </div>
+                            <button onclick="saveMemberSettings()"
+                                class="w-full mt-2 py-2 rounded-xl text-xs font-bold"
+                                style="background:var(--brand);color:white">
+                                💾 บันทึกการตั้งค่าสมาชิก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- USER MACHINES: mobile=stacked, desktop=3 cols -->
@@ -507,7 +600,7 @@
         // แสดง/ซ่อน logout button
         const logoutBtn = document.getElementById('admin-logout-btn');
         if (logoutBtn) logoutBtn.classList.toggle('hidden', !isAdmin);
-        if (isAdmin) { loadAdminStats(); loadAdminUsers(); }
+        if (isAdmin) { loadAdminStats(); loadAdminUsers(); loadPricing(); loadMemberSettings(); }
         render();
     }
 
@@ -1100,6 +1193,176 @@
         'D7': 'เครื่องอบ 7',  'D8': 'เครื่องอบ 8',
     };
 
+    // ══════════════════════════════════════════════════════════
+    // M1: PRICING SYSTEM
+    // ══════════════════════════════════════════════════════════
+    const DEFAULT_PRICING = {
+        W1:{cold:60,warm:70,hot:70,label:'เครื่องซัก 1 (15kg)'},
+        W2:{cold:60,warm:70,hot:70,label:'เครื่องซัก 2 (15kg)'},
+        W3:{cold:60,warm:70,hot:70,label:'เครื่องซัก 3 (15kg)'},
+        W4:{cold:50,warm:60,hot:60,label:'เครื่องซัก 4 (10kg)'},
+        D5:{single:50,label:'เครื่องอบ 5 (15kg)'},
+        D6:{single:50,label:'เครื่องอบ 6 (15kg)'},
+        D7:{single:50,label:'เครื่องอบ 7 (15kg)'},
+        D8:{single:50,label:'เครื่องอบ 8 (15kg)'},
+        AQUA9:{p1:100,p2:120,p3:140,p4:160,label:'AQUA 9 (17kg)'},
+        AQUA10:{p1:120,p2:140,p3:160,p4:180,label:'AQUA 10 (27kg)'},
+    };
+    let _pricing = {};
+
+    window.togglePricingSection = function() {
+        const sec = document.getElementById('pricing-section');
+        const btn = document.getElementById('pricing-toggle-btn');
+        if (!sec) return;
+        sec.classList.toggle('hidden');
+        btn.textContent = sec.classList.contains('hidden') ? '▼ แสดง' : '▲ ซ่อน';
+    };
+
+    async function loadPricing() {
+        try {
+            const snap = await get(ref(database, 'laundry_system/pricing'));
+            _pricing = snap.exists() ? snap.val() : {};
+            Object.keys(DEFAULT_PRICING).forEach(mid => {
+                if (!_pricing[mid]) _pricing[mid] = {...DEFAULT_PRICING[mid]};
+            });
+        } catch(e) {
+            _pricing = JSON.parse(JSON.stringify(DEFAULT_PRICING));
+        }
+        renderPricing();
+    }
+
+    function renderPricing() {
+        const wEl = document.getElementById('pricing-washer');
+        const dEl = document.getElementById('pricing-dryer');
+        const aEl = document.getElementById('pricing-aqua');
+        if (!wEl) return;
+        const iCls = 'w-16 text-sm px-2 py-1 rounded-lg border text-center';
+        const iSty = 'border-color:var(--border);background:var(--bg-page);color:var(--text-main)';
+
+        wEl.innerHTML = ['W1','W2','W3','W4'].map(mid => {
+            const p = _pricing[mid] || DEFAULT_PRICING[mid];
+            return `<div class="border-b pb-3" style="border-color:var(--border)">
+                <div class="text-xs font-semibold mb-2" style="color:var(--text-main)">${p.label}</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="text-center"><div class="text-[10px] mb-1" style="color:var(--text-muted)">❄️ Cold</div>
+                        <input data-mid="${mid}" data-program="cold" type="number" min="0" value="${p.cold}" class="${iCls}" style="${iSty}"/></div>
+                    <div class="text-center"><div class="text-[10px] mb-1" style="color:var(--text-muted)">🌤 Warm</div>
+                        <input data-mid="${mid}" data-program="warm" type="number" min="0" value="${p.warm}" class="${iCls}" style="${iSty}"/></div>
+                    <div class="text-center"><div class="text-[10px] mb-1" style="color:var(--text-muted)">🔥 Hot</div>
+                        <input data-mid="${mid}" data-program="hot" type="number" min="0" value="${p.hot}" class="${iCls}" style="${iSty}"/></div>
+                </div></div>`;
+        }).join('') + `<button onclick="savePricing('washer')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา Washer</button>`;
+
+        dEl.innerHTML = ['D5','D6','D7','D8'].map(mid => {
+            const p = _pricing[mid] || DEFAULT_PRICING[mid];
+            return `<div class="flex items-center justify-between gap-2">
+                <span class="text-xs" style="color:var(--text-main)">${p.label}</span>
+                <div class="flex items-center gap-1"><span class="text-xs" style="color:var(--text-muted)">฿</span>
+                <input data-mid="${mid}" data-program="single" type="number" min="0" value="${p.single}" class="${iCls}" style="${iSty}"/></div></div>`;
+        }).join('') + `<button onclick="savePricing('dryer')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา Dryer</button>`;
+
+        aEl.innerHTML = ['AQUA9','AQUA10'].map(mid => {
+            const p = _pricing[mid] || DEFAULT_PRICING[mid];
+            return `<div class="border-b pb-3" style="border-color:var(--border)">
+                <div class="text-xs font-semibold mb-2" style="color:var(--text-main)">${p.label}</div>
+                <div class="grid grid-cols-4 gap-1">${['p1','p2','p3','p4'].map(pg => `
+                    <div class="text-center"><div class="text-[10px] mb-1" style="color:var(--text-muted)">${pg.toUpperCase()}</div>
+                    <input data-mid="${mid}" data-program="${pg}" type="number" min="0" value="${p[pg]}" class="${iCls}" style="${iSty}"/></div>`).join('')}
+                </div></div>`;
+        }).join('') + `<button onclick="savePricing('aqua')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา AQUA</button>`;
+    }
+
+    window.savePricing = async function(group) {
+        const groupMap = {washer:['W1','W2','W3','W4'],dryer:['D5','D6','D7','D8'],aqua:['AQUA9','AQUA10']};
+        const updates = {};
+        (groupMap[group]||[]).forEach(mid => {
+            const data = {label: (_pricing[mid]||DEFAULT_PRICING[mid]).label};
+            document.querySelectorAll(`input[data-mid="${mid}"]`).forEach(inp => {
+                data[inp.dataset.program] = Number(inp.value)||0;
+            });
+            updates[mid] = data;
+            _pricing[mid] = data;
+        });
+        try {
+            await update(ref(database,'laundry_system/pricing'), updates);
+            showToast(`✅ บันทึกราคา ${group.toUpperCase()} แล้ว`,'💾',3000);
+        } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
+    };
+
+    // ══════════════════════════════════════════════════════════
+    // M1: MEMBER SETTINGS
+    // ══════════════════════════════════════════════════════════
+    async function loadMemberSettings() {
+        try {
+            const snap = await get(ref(database,'laundry_system/settings/members'));
+            const s = snap.exists() ? snap.val() : {};
+            document.getElementById('setting-points-rate').value     = s.points_rate      ?? 10;
+            document.getElementById('setting-newuser-discount').value = s.newuser_discount ?? 10;
+            document.getElementById('setting-loyalty-every').value    = s.loyalty_every    ?? 10;
+            document.getElementById('setting-loyalty-program').value  = s.loyalty_program  ?? 'dryer-single';
+            document.getElementById('setting-redeem-points').value    = s.redeem_points    ?? 100;
+            document.getElementById('setting-redeem-baht').value      = s.redeem_baht      ?? 50;
+        } catch(e) { console.error('loadMemberSettings:', e); }
+    }
+
+    window.saveMemberSettings = async function() {
+        const settings = {
+            points_rate:      Number(document.getElementById('setting-points-rate').value)||10,
+            newuser_discount: Number(document.getElementById('setting-newuser-discount').value)||0,
+            loyalty_every:    Number(document.getElementById('setting-loyalty-every').value)||10,
+            loyalty_program:  document.getElementById('setting-loyalty-program').value,
+            redeem_points:    Number(document.getElementById('setting-redeem-points').value)||100,
+            redeem_baht:      Number(document.getElementById('setting-redeem-baht').value)||50,
+        };
+        try {
+            await set(ref(database,'laundry_system/settings/members'), settings);
+            showToast('✅ บันทึกการตั้งค่าสมาชิกแล้ว','🎁',3000);
+        } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
+    };
+
+    // ══════════════════════════════════════════════════════════
+    // SERVER-DOWN DETECTION
+    // ══════════════════════════════════════════════════════════
+    let lastSyncTime = null;
+    let serverDown   = false;
+    const STALE_THRESHOLD = 600; // 10 นาที
+
+    onValue(ref(database,'laundry_system/last_sync'), (snap) => {
+        if (snap.val()) {
+            lastSyncTime = new Date(snap.val().replace(' ','T') + '+07:00');
+            updateRelativeTime();
+        }
+    });
+
+    function updateRelativeTime() {
+        if (!lastSyncTime) return;
+        const diff = Math.floor((Date.now() - lastSyncTime.getTime()) / 1000);
+        const wasDown = serverDown;
+        serverDown = diff > STALE_THRESHOLD;
+        let text;
+        if (serverDown) {
+            text = `⚠️ ไม่สามารถเชื่อมต่อ Server ได้ (${Math.floor(diff/60)} นาที)`;
+        } else if (diff < 60) { text = 'อัปเดตเมื่อสักครู่';
+        } else if (diff < 3600) { text = `อัปเดต ${Math.floor(diff/60)} นาทีที่แล้ว`;
+        } else { text = `อัปเดต ${Math.floor(diff/3600)} ชม.ที่แล้`; }
+
+        const el = document.getElementById('last-sync-display');
+        if (el) { el.innerText = text; el.style.color = serverDown ? '#ef4444' : ''; el.style.fontWeight = serverDown ? '700' : ''; }
+
+        const dot = document.getElementById('status-dot');
+        if (dot) {
+            dot.classList.toggle('bg-emerald-500', !serverDown);
+            dot.classList.toggle('bg-red-500',  serverDown);
+            dot.classList.toggle('animate-pulse', serverDown);
+        }
+        if (wasDown !== serverDown) {
+            if (typeof render === 'function') render();
+            showToast(serverDown ? '⚠️ ระบบไม่สามารถเชื่อมต่อ Server ได้' : '✅ ระบบกลับมาเชื่อมต่อ Server ได้แล้ว',
+                serverDown ? '🔴' : '✅', serverDown ? 6000 : 5000);
+        }
+    }
+    setInterval(updateRelativeTime, 30000);
+
     window.notifyMe = async (machineId, displayName) => {
         const btn = document.querySelector(`[data-notify="${machineId}"]`);
 
@@ -1165,9 +1428,28 @@
 function createMachineHTML(name, info) {
         const isAqua = name.includes('AQUA') || name.includes('ซัก-อบ');
         const isWasher = name.includes('W') || name.includes('เครื่องซัก');
-        const num = name.replace(/\D/g,''); // ดึงเฉพาะตัวเลขออกมา
-        
-        // Logic ใหม่: จับคู่ความจุด้วยตัวเลขลำดับเครื่อง
+        const num = name.replace(/\D/g,'');
+
+        // ── Server-down: W/D แสดง LOADING (AQUA คงสถานะเดิม) ──
+        if (typeof serverDown !== 'undefined' && serverDown && !isAqua) {
+            const displayName = isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`;
+            return `
+            <div class="machine-card flex flex-col min-h-[13rem] opacity-60">
+                <div class="machine-header" style="background:#9A9490">${displayName}</div>
+                <div class="flex-grow flex flex-col items-center justify-center p-3">
+                    <div class="w-14 h-14 mb-2">
+                        <svg viewBox="0 0 50 50" class="w-full h-full animate-spin" style="animation-duration:2s">
+                            <circle cx="25" cy="25" r="20" stroke="#9A9490" stroke-width="4" fill="transparent" opacity="0.2"/>
+                            <circle cx="25" cy="25" r="20" stroke="#9A9490" stroke-width="4" fill="transparent"
+                                stroke-dasharray="30 100" stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:center"/>
+                        </svg>
+                    </div>
+                    <div class="text-[11px] font-bold tracking-wider" style="color:#9A9490">LOADING</div>
+                    <div class="text-[10px] mt-1" style="color:var(--text-muted)">Server connecting...</div>
+                </div>
+            </div>`;
+        }
+
         let capacityText = "";
         if (isWasher && !isAqua) {
             if (num === "1" || num === "2" || num === "3") capacityText = "15KG";
@@ -1176,10 +1458,9 @@ function createMachineHTML(name, info) {
             if (num === "9") capacityText = "17KG";
             else if (num === "10") capacityText = "27KG";
         } else {
-            // Dryer D5-D8 → 14KG
-            capacityText = machineCapacities[name] || "14KG";
+            capacityText = "15KG";  // Dryer D5-D8 = 15KG
         }
-        
+
         let displayName = isAqua ? `เครื่องซัก-อบ ${num}` : (isWasher ? `เครื่องซัก ${num}` : `เครื่องอบ ${num}`);
         
         const cardHeight = isAqua ? 'h-52 md:h-64' : 'min-h-[13rem]'; 

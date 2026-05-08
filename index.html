@@ -1831,7 +1831,7 @@ function createMachineHTML(name, info) {
                     </button>`}
                     ${(info.subscriber_count > 0) ? `<div class="text-center text-[10px] text-slate-400 dark:text-slate-500 mt-1">มี ${info.subscriber_count} คน รอแจ้งเตือน</div>` : ''}
                     ` : `
-                    ${(!isAqua && status === 'available') ? `
+                    ${(!isAqua && (info?.status?.toLowerCase() === 'available' || !info?.status)) ? `
                     <button onclick="openPaymentModal('${name}', '${displayName}')"
                         class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black
                                active:scale-95 transition-all"

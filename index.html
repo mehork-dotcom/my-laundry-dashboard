@@ -405,6 +405,40 @@
                                         style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
                                 </div>
                             </div>
+                            <div>
+                                <label class="text-xs font-semibold mb-2 block" style="color:var(--text-sub)">โปรแกรมที่ได้แต้ม x2</label>
+                                <div class="grid grid-cols-3 gap-1.5" id="dbl-pts-grid">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-warm" value="warm" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">WARM</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-hot" value="hot" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">HOT</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-single" value="single" class="w-3.5 h-3.5 accent-pink-500"/>
+                                        <span class="text-xs" style="color:var(--text-main)">SINGLE</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-p1" value="p1" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">P1</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-p2" value="p2" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">P2</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-p3" value="p3" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">P3</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" id="dbl-p4" value="p4" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <span class="text-xs" style="color:var(--text-main)">P4</span>
+                                    </label>
+                                </div>
+                                <div class="text-[10px] mt-1" style="color:var(--text-muted)">Cold = x1 เสมอ (ไม่สามารถเลือกได้)</div>
+                            </div>
                             <button onclick="saveMemberSettings()"
                                 class="w-full mt-2 py-2 rounded-xl text-xs font-bold"
                                 style="background:var(--brand);color:white">
@@ -1303,7 +1337,7 @@
 
         const pts_rate = _paySettings.points_rate || 10;
         // double_point_programs มาจาก Firebase settings (default: hot, p1-p4)
-        const dblProgs = _paySettings.double_point_programs || ['hot','p1','p2','p3','p4'];
+        const dblProgs = _paySettings.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
         const credit   = parseFloat(_payMember.credit_balance || 0);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
 
@@ -1366,7 +1400,7 @@
         const credited = useCredit ? Math.min(credit, price) : 0;
         const final    = Math.max(0, price - credited);
         const pts_rate = _paySettings.points_rate || 10;
-        const dblProgs = _paySettings.double_point_programs || ['hot','p1','p2','p3','p4'];
+        const dblProgs = _paySettings.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
         const is_dbl   = dblProgs.includes(_prog) || isAqua(_mid);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
         let pts = Math.floor(final / pts_rate) * (is_dbl ? 2 : 1);
@@ -1738,6 +1772,14 @@
     // ══════════════════════════════════════════════════════════
     // M1: MEMBER SETTINGS
     // ══════════════════════════════════════════════════════════
+    function _getDoublePrograms() {
+        return ['warm','hot','single','p1','p2','p3','p4']
+            .filter(p => {
+                const el = document.getElementById(`dbl-${p}`);
+                return el && el.checked;
+            });
+    }
+
     async function loadMemberSettings() {
         try {
             const snap = await get(ref(database,'laundry_system/settings/members'));
@@ -1748,6 +1790,12 @@
             document.getElementById('setting-loyalty-program').value  = s.loyalty_program  ?? 'dryer-single';
             document.getElementById('setting-redeem-points').value    = s.redeem_points    ?? 100;
             document.getElementById('setting-redeem-baht').value      = s.redeem_baht      ?? 50;
+            // โหลด double_point_programs checkboxes
+            const dbl = s.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
+            ['warm','hot','single','p1','p2','p3','p4'].forEach(p => {
+                const el = document.getElementById(`dbl-${p}`);
+                if (el) el.checked = dbl.includes(p);
+            });
         } catch(e) { console.error('loadMemberSettings:', e); }
     }
 
@@ -1760,7 +1808,7 @@
             redeem_points:         Number(document.getElementById('setting-redeem-points').value)||100,
             redeem_baht:           Number(document.getElementById('setting-redeem-baht').value)||50,
             // โปรแกรมที่ได้แต้ม x2 (default: hot, p1-p4 เท่านั้น — ไม่มี warm)
-            double_point_programs: ['hot','p1','p2','p3','p4'],
+            double_point_programs: _getDoublePrograms(),
         };
         try {
             await set(ref(database,'laundry_system/settings/members'), settings);

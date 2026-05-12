@@ -1234,17 +1234,18 @@
         }
     };
 
-    // ── STEP NAVIGATION ──────────────────────────────────────────
-    function _showStep(step) {
+    // ── STEP NAVIGATION (global เพื่อใช้ใน onclick="") ─────────
+    window._showStep = function(step) {
         _step = step;
         document.querySelectorAll('[data-paystep]').forEach(el => {
             el.classList.toggle('hidden', el.dataset.paystep !== step);
         });
-        // Render content per step
         if (step === 'intro')   _renderIntro();
         if (step === 'program') _renderPrograms();
         if (step === 'method')  _renderMethods();
-    }
+    };
+    // alias สั้น
+    function _showStep(step) { window._showStep(step); }
 
     // ── STEP: INTRO ──────────────────────────────────────────────
     function _renderIntro() {
@@ -1265,10 +1266,31 @@
             `กรุณากดเลือก${name}ที่หน้าเครื่องก่อน`;
     }
 
-    window.payIntroConfirm = function() {
+    window.payIntroConfirm = async function() {
         _showStep('checking');
-        // Simulate checking (2 วิ) แล้วไปเลือก program
-        setTimeout(() => _showStep('program'), 2200);
+        // อ่าน machines/{mid}/price จาก Firebase เพื่อ detect โปรแกรมที่เลือก
+        let autoProgram = '';
+        try {
+            const snap = await get(ref(database, `laundry_system/machines/${_mid}`));
+            const mData = snap.val() || {};
+            const machinePrice = parseFloat(mData.price || 0);
+            if (machinePrice > 0 && Object.keys(_payPricing).length > 0) {
+                // หา program ที่ราคาตรงกัน
+                for (const [prog, price] of Object.entries(_payPricing)) {
+                    if (Math.abs(parseFloat(price) - machinePrice) < 1) {
+                        autoProgram = prog;
+                        break;
+                    }
+                }
+            }
+        } catch(e) { console.error('autoDetect:', e); }
+
+        // รอ spinner ให้ดู (อย่างน้อย 1.5 วิ)
+        await new Promise(r => setTimeout(r, 1500));
+        _showStep('program');
+        if (autoProgram) {
+            selectProg(autoProgram);
+        }
     };
 
     // ── STEP: PROGRAM SELECTION ──────────────────────────────────
@@ -1280,21 +1302,24 @@
             : ['single'];
 
         const pts_rate = _paySettings.points_rate || 10;
+        // double_point_programs มาจาก Firebase settings (default: hot, p1-p4)
+        const dblProgs = _paySettings.double_point_programs || ['hot','p1','p2','p3','p4'];
         const credit   = parseFloat(_payMember.credit_balance || 0);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
 
         document.getElementById('pay-prog-list').innerHTML = progs.map(p => {
             const info   = PROGRAM_INFO[p] || { label: p, desc: '' };
             const price  = parseFloat(_payPricing[p] || 0);
-            const is_dbl = ['hot','p1','p2','p3','p4'].includes(p) || isAqua(mid);
+            const is_dbl = dblProgs.includes(p) || isAqua(_mid);
             const pts    = Math.floor(price / pts_rate) * (is_dbl ? 2 : 1);
+            const dblBadge = is_dbl ? `<span class="text-[9px] px-1 py-0.5 rounded font-bold" style="background:color-mix(in srgb,var(--brand) 20%,transparent);color:var(--brand)">x2</span>` : '';
             return `
             <button onclick="selectProg('${p}')" data-prog="${p}"
                 class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all active:scale-95"
                 style="border-color:var(--border);background:var(--bg-page)">
                 <div class="text-left">
-                    <div class="font-bold text-sm" style="color:var(--text-main)">${info.label}</div>
-                    <div class="text-xs" style="color:var(--text-muted)">${info.desc}</div>
+                    <div class="flex items-center gap-1.5 font-bold text-sm" style="color:var(--text-main)">${info.label} ${dblBadge}</div>
+                    <div class="text-xs" style="color:var(--text-muted)">${info.desc.replace(' x2 แต้ม','')}</div>
                 </div>
                 <div class="text-right">
                     <div class="font-black text-lg" style="color:var(--brand)">฿${price}</div>
@@ -1333,7 +1358,7 @@
         _updateSummary();
     };
 
-    function _updateSummary() {
+    window._updateSummary = function() {
         if (!_prog) return;
         const price    = parseFloat(_payPricing[_prog] || 0);
         const useCredit= document.getElementById('pay-use-credit').checked;
@@ -1341,7 +1366,8 @@
         const credited = useCredit ? Math.min(credit, price) : 0;
         const final    = Math.max(0, price - credited);
         const pts_rate = _paySettings.points_rate || 10;
-        const is_dbl   = ['hot','p1','p2','p3','p4'].includes(_prog) || isAqua(_mid);
+        const dblProgs = _paySettings.double_point_programs || ['hot','p1','p2','p3','p4'];
+        const is_dbl   = dblProgs.includes(_prog) || isAqua(_mid);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
         let pts = Math.floor(final / pts_rate) * (is_dbl ? 2 : 1);
         if (is_new) pts += 50;
@@ -1727,12 +1753,14 @@
 
     window.saveMemberSettings = async function() {
         const settings = {
-            points_rate:      Number(document.getElementById('setting-points-rate').value)||10,
-            newuser_discount: Number(document.getElementById('setting-newuser-discount').value)||0,
-            loyalty_every:    Number(document.getElementById('setting-loyalty-every').value)||10,
-            loyalty_program:  document.getElementById('setting-loyalty-program').value,
-            redeem_points:    Number(document.getElementById('setting-redeem-points').value)||100,
-            redeem_baht:      Number(document.getElementById('setting-redeem-baht').value)||50,
+            points_rate:           Number(document.getElementById('setting-points-rate').value)||10,
+            newuser_discount:      Number(document.getElementById('setting-newuser-discount').value)||0,
+            loyalty_every:         Number(document.getElementById('setting-loyalty-every').value)||10,
+            loyalty_program:       document.getElementById('setting-loyalty-program').value,
+            redeem_points:         Number(document.getElementById('setting-redeem-points').value)||100,
+            redeem_baht:           Number(document.getElementById('setting-redeem-baht').value)||50,
+            // โปรแกรมที่ได้แต้ม x2 (default: hot, p1-p4 เท่านั้น — ไม่มี warm)
+            double_point_programs: ['hot','p1','p2','p3','p4'],
         };
         try {
             await set(ref(database,'laundry_system/settings/members'), settings);

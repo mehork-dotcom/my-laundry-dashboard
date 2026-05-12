@@ -461,7 +461,6 @@
     
     let currentData = null;
     let isAdminMode = false;
-    const PAYMENT_API = 'https://my-laundry-scraper-production.up.railway.app';
 
     let liffUserId = null;         // userId จาก LINE LIFF
     let liffReady = false;         // LIFF init เสร็จแล้วหรือยัง
@@ -1175,297 +1174,422 @@
     };
 
     // ============================================================
-    // M2b: PAYMENT SYSTEM
+    // M2b: PAYMENT SYSTEM (Beam Integration)
     // ============================================================
-    let _payMachineId  = '';
-    let _payProgram    = '';
-    let _payStep       = 'select'; // select | qr | success | error
-    let _payTxId       = '';
-    let _payCountdown  = null;
-    let _payPollTimer  = null;
-    let _payPricing    = {};
-    let _payMemberData = {};
+    const PAYMENT_API = 'https://my-laundry-scraper-production.up.railway.app';
 
-    window.openPaymentModal = async function(machineId, displayName) {
-        _payMachineId = machineId;
-        _payProgram   = '';
-        _payStep      = 'select';
+    // State
+    let _mid = '', _prog = '', _step = 'intro', _txId = '', _claimId = '';
+    let _payPricing = {}, _payMember = {}, _paySettings = {}, _addTime = false;
+    let _countdownTimer = null, _pollTimer = null;
 
-        // Reset UI
+    // ── Machine type helpers ─────────────────────────────────────
+    const isWasher = (mid) => mid.startsWith('W');
+    const isDryer  = (mid) => mid.startsWith('D');
+    const isAqua   = (mid) => mid.startsWith('AQUA');
+
+    const PROGRAM_INFO = {
+        cold:   { label: '❄️ น้ำเย็น',  desc: 'ซักทั่วไป ประหยัดพลังงาน', temp: 'Cold'  },
+        warm:   { label: '🌤 น้ำอุ่น',   desc: 'ซักคราบมัน เสื้อผ้าประจำวัน', temp: 'Warm' },
+        hot:    { label: '🔥 น้ำร้อน',  desc: 'ฆ่าเชื้อโรค ผ้าฝ้าย x2 แต้ม', temp: 'Hot'  },
+        single: { label: '🌀 อบผ้า',    desc: 'โปรแกรมมาตรฐาน',       temp: ''     },
+        p1:     { label: '🟢 P1 (เบา)', desc: 'น้ำหนักน้อย x2 แต้ม',   temp: 'P1'   },
+        p2:     { label: '🟡 P2 (กลาง)', desc: 'น้ำหนักปานกลาง x2 แต้ม', temp: 'P2'  },
+        p3:     { label: '🟠 P3 (หนัก)', desc: 'น้ำหนักมาก x2 แต้ม',   temp: 'P3'   },
+        p4:     { label: '🔴 P4 (หนักพิเศษ)', desc: 'น้ำหนักสูงสุด x2 แต้ม', temp: 'P4' },
+    };
+
+    // ── OPEN MODAL ───────────────────────────────────────────────
+    window.openPaymentModal = async function(machineId, displayName, addTime = false) {
+        _mid = machineId; _prog = ''; _addTime = addTime;
         document.getElementById('pay-machine-name').textContent = displayName;
-        const isWasher = machineId.startsWith('W');
-        document.getElementById('pay-machine-type').textContent =
-            isWasher ? '🔵 เครื่องซักผ้า' : '🟠 เครื่องอบผ้า';
+        const typeEl = document.getElementById('pay-machine-type');
+        typeEl.textContent = isAqua(machineId) ? '✨ AQUA All-in-one' :
+                             isDryer(machineId) ? '🌀 เครื่องอบผ้า' : '🔵 เครื่องซักผ้า';
+        if (addTime) typeEl.textContent += ' · เพิ่มเวลา';
 
-        _showPayStep('select');
+        // โหลดข้อมูล
+        try {
+            const [ps, ms, ss] = await Promise.all([
+                get(ref(database, `laundry_system/pricing/${machineId}`)),
+                liffUserId ? get(ref(database, `laundry_system/members/${liffUserId}`)) : Promise.resolve(null),
+                get(ref(database, 'laundry_system/settings/members')),
+            ]);
+            _payPricing  = ps.exists()  ? ps.val()  : {};
+            _payMember   = ms?.exists() ? ms.val()  : {};
+            _paySettings = ss.exists()  ? ss.val()  : {};
+        } catch(e) { console.error('loadPayData:', e); }
+
+        // เปิด modal
         document.getElementById('payment-modal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
-        // โหลด pricing
-        try {
-            const snap = await get(ref(database, `laundry_system/pricing/${machineId}`));
-            _payPricing = snap.exists() ? snap.val() : {};
-        } catch(e) { _payPricing = {}; }
-
-        // โหลด member data + settings
-        const settings = {};
-        try {
-            const ss = await get(ref(database, 'laundry_system/settings/members'));
-            Object.assign(settings, ss.val() || {});
-        } catch(e) {}
-
-        if (liffUserId) {
-            try {
-                const ms = await get(ref(database, `laundry_system/members/${liffUserId}`));
-                _payMemberData = ms.exists() ? ms.val() : {};
-            } catch(e) { _payMemberData = {}; }
+        // เลือก step แรกตาม machine type
+        if (isWasher(machineId) || isAqua(machineId)) {
+            _showStep('intro');     // popup กดเลือกที่เครื่องก่อน
         } else {
-            _payMemberData = {};
+            // Dryer → ไปเลือก program โดยตรง
+            _prog = 'single';
+            _showStep('program');
         }
+    };
 
-        // Render program list
-        const isMachine  = machineId.startsWith('W');
-        const isDryer    = machineId.startsWith('D');
-        const programs   = isMachine
-            ? [{key:'cold',label:'❄️ Cold',desc:'น้ำเย็น'},
-               {key:'warm',label:'🌤 Warm',desc:'น้ำอุ่น'},
-               {key:'hot', label:'🔥 Hot', desc:'น้ำร้อน'}]
-            : isDryer
-            ? [{key:'single',label:'🌀 อบผ้า',desc:'โปรแกรมมาตรฐาน'}]
-            : [];
+    // ── STEP NAVIGATION ──────────────────────────────────────────
+    function _showStep(step) {
+        _step = step;
+        document.querySelectorAll('[data-paystep]').forEach(el => {
+            el.classList.toggle('hidden', el.dataset.paystep !== step);
+        });
+        // Render content per step
+        if (step === 'intro')   _renderIntro();
+        if (step === 'program') _renderPrograms();
+        if (step === 'method')  _renderMethods();
+    }
 
-        const container = document.getElementById('pay-program-list');
-        container.innerHTML = programs.map(p => {
-            const price = _payPricing[p.key] ?? 0;
+    // ── STEP: INTRO ──────────────────────────────────────────────
+    function _renderIntro() {
+        const mid = _mid;
+        const programs = isWasher(mid)
+            ? [['cold','❄️ Cold','น้ำเย็น ซักทั่วไป'],['warm','🌤 Warm','น้ำอุ่น เสื้อผ้าทั่วไป'],['hot','🔥 Hot','น้ำร้อน ฆ่าเชื้อโรค']]
+            : [['p1','🟢 P1','น้ำหนักน้อย'],['p2','🟡 P2','น้ำหนักกลาง'],['p3','🟠 P3','น้ำหนักมาก'],['p4','🔴 P4','น้ำหนักสูงสุด']];
+
+        const name = isWasher(mid) ? 'โปรแกรมซัก' : 'โปรแกรม';
+        document.getElementById('pay-intro-list').innerHTML = programs.map(([k,l,d]) =>
+            `<div class="flex items-center gap-2 text-sm">
+                <span class="text-base">${l.split(' ')[0]}</span>
+                <div><span class="font-bold" style="color:var(--text-main)">${l.split(' ').slice(1).join(' ')}</span>
+                <span class="text-xs ml-1" style="color:var(--text-muted)">${d}</span></div>
+            </div>`
+        ).join('');
+        document.getElementById('pay-intro-title').textContent =
+            `กรุณากดเลือก${name}ที่หน้าเครื่องก่อน`;
+    }
+
+    window.payIntroConfirm = function() {
+        _showStep('checking');
+        // Simulate checking (2 วิ) แล้วไปเลือก program
+        setTimeout(() => _showStep('program'), 2200);
+    };
+
+    // ── STEP: PROGRAM SELECTION ──────────────────────────────────
+    function _renderPrograms() {
+        const mid = _mid;
+        const progs = isWasher(mid)
+            ? ['cold','warm','hot']
+            : isAqua(mid) ? ['p1','p2','p3','p4']
+            : ['single'];
+
+        const pts_rate = _paySettings.points_rate || 10;
+        const credit   = parseFloat(_payMember.credit_balance || 0);
+        const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
+
+        document.getElementById('pay-prog-list').innerHTML = progs.map(p => {
+            const info   = PROGRAM_INFO[p] || { label: p, desc: '' };
+            const price  = parseFloat(_payPricing[p] || 0);
+            const is_dbl = ['hot','p1','p2','p3','p4'].includes(p) || isAqua(mid);
+            const pts    = Math.floor(price / pts_rate) * (is_dbl ? 2 : 1);
             return `
-            <button onclick="selectProgram('${p.key}')" data-prog="${p.key}"
-                class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all"
+            <button onclick="selectProg('${p}')" data-prog="${p}"
+                class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all active:scale-95"
                 style="border-color:var(--border);background:var(--bg-page)">
                 <div class="text-left">
-                    <div class="font-bold text-sm" style="color:var(--text-main)">${p.label}</div>
-                    <div class="text-xs" style="color:var(--text-muted)">${p.desc}</div>
+                    <div class="font-bold text-sm" style="color:var(--text-main)">${info.label}</div>
+                    <div class="text-xs" style="color:var(--text-muted)">${info.desc}</div>
                 </div>
-                <div class="font-black text-lg" style="color:var(--brand)">฿${price}</div>
+                <div class="text-right">
+                    <div class="font-black text-lg" style="color:var(--brand)">฿${price}</div>
+                    <div class="text-[10px]" style="color:var(--text-muted)">+${pts} แต้ม</div>
+                </div>
             </button>`;
         }).join('');
 
-        // Credit balance display
-        const credit = _payMemberData.credit_balance || 0;
-        const creditSection = document.getElementById('pay-credit-section');
+        // Warning
+        const warnEl = document.getElementById('pay-prog-warning');
+        warnEl.classList.toggle('hidden', isDryer(mid));
+
+        // Credit section
+        const creditEl = document.getElementById('pay-credit-section');
         if (credit > 0 && liffUserId) {
-            creditSection.classList.remove('hidden');
-            document.getElementById('pay-credit-amount').textContent = `฿${credit}`;
-        } else {
-            creditSection.classList.add('hidden');
-        }
+            creditEl.classList.remove('hidden');
+            document.getElementById('pay-credit-bal').textContent = `฿${credit.toFixed(0)}`;
+        } else { creditEl.classList.add('hidden'); }
 
-        // Default: เลือก program แรกอัตโนมัติ (ถ้ามีแค่ 1)
-        if (programs.length === 1) selectProgram(programs[0].key);
-    };
+        // New member welcome
+        const newEl = document.getElementById('pay-welcome-pts');
+        if (is_new) { newEl.classList.remove('hidden'); }
+        else { newEl.classList.add('hidden'); }
 
-    window.selectProgram = function(prog) {
-        _payProgram = prog;
-        // Highlight selected
+        // Default select first program
+        if (progs.length === 1) selectProg(progs[0]);
+    }
+
+    window.selectProg = function(p) {
+        _prog = p;
         document.querySelectorAll('[data-prog]').forEach(btn => {
-            const isSelected = btn.dataset.prog === prog;
-            btn.style.borderColor = isSelected ? 'var(--brand)' : 'var(--border)';
-            btn.style.background  = isSelected ? 'var(--brand)1a' : 'var(--bg-page)';
+            const sel = btn.dataset.prog === p;
+            btn.style.borderColor = sel ? 'var(--brand)' : 'var(--border)';
+            btn.style.background  = sel ? 'color-mix(in srgb,var(--brand) 12%,transparent)' : 'var(--bg-page)';
         });
-        updatePaymentSummary();
+        _updateSummary();
     };
 
-    window.updatePaymentSummary = function() {
-        if (!_payProgram) return;
-        const price     = _payPricing[_payProgram] ?? 0;
-        const settings  = {};  // loaded globally above
-        const credit    = _payMemberData.credit_balance || 0;
-        const uses      = _payMemberData.total_uses || 0;
-        const useCredit = document.getElementById('pay-use-credit').checked;
+    function _updateSummary() {
+        if (!_prog) return;
+        const price    = parseFloat(_payPricing[_prog] || 0);
+        const useCredit= document.getElementById('pay-use-credit').checked;
+        const credit   = parseFloat(_payMember.credit_balance || 0);
+        const credited = useCredit ? Math.min(credit, price) : 0;
+        const final    = Math.max(0, price - credited);
+        const pts_rate = _paySettings.points_rate || 10;
+        const is_dbl   = ['hot','p1','p2','p3','p4'].includes(_prog) || isAqua(_mid);
+        const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
+        let pts = Math.floor(final / pts_rate) * (is_dbl ? 2 : 1);
+        if (is_new) pts += 50;
 
-        // ส่วนลดสมาชิกใหม่
-        let discount = 0;
-        if (uses === 0 && liffUserId) {
-            discount = Math.round(price * 0.10); // 10%
-        }
-
-        // Credit
-        const creditUsed = useCredit ? Math.min(credit, price - discount) : 0;
-        const final      = Math.max(0, price - discount - creditUsed);
-
-        document.getElementById('pay-original').textContent = `฿${price}`;
-        document.getElementById('pay-final').textContent    = `฿${final}`;
-
-        const discRow = document.getElementById('pay-discount-row');
-        discRow.classList.toggle('hidden', discount === 0);
-        document.getElementById('pay-discount-val').textContent = `-฿${discount}`;
-
-        const credRow = document.getElementById('pay-credit-row');
-        credRow.classList.toggle('hidden', creditUsed === 0);
-        document.getElementById('pay-credit-val').textContent = `-฿${creditUsed}`;
-
-        // Points preview (฿10 = 1 แต้ม)
-        const pointsEarned = Math.floor(final / 10);
-        const pointsEl = document.getElementById('pay-points-preview');
-        if (pointsEarned > 0 && liffUserId) {
-            pointsEl.textContent = `🎁 จะได้รับ +${pointsEarned} แต้ม`;
-            pointsEl.style.color = 'var(--brand)';
+        document.getElementById('pay-summary-orig').textContent  = `฿${price}`;
+        document.getElementById('pay-summary-final').textContent = `฿${final}`;
+        const crRow = document.getElementById('pay-summary-credit-row');
+        crRow.classList.toggle('hidden', credited === 0);
+        document.getElementById('pay-summary-credit-val').textContent = `-฿${credited}`;
+        const ptsEl = document.getElementById('pay-summary-pts');
+        if (pts > 0 && liffUserId) {
+            ptsEl.textContent = `🎁 จะได้รับ +${pts} แต้ม${is_dbl?' (x2!)':''}${is_new?' +50 Welcome':''}`;
         } else if (!liffUserId) {
-            pointsEl.textContent = '💡 เปิดใน LINE เพื่อสะสมแต้ม';
-            pointsEl.style.color = 'var(--text-muted)';
-        } else {
-            pointsEl.textContent = '';
-        }
+            ptsEl.textContent = '💡 เปิดใน LINE เพื่อสะสมแต้ม';
+        } else { ptsEl.textContent = ''; }
+    }
+
+    window.progToMethod = function() {
+        if (!_prog) { showToast('กรุณาเลือกโปรแกรมก่อนครับ','⚠️',2000); return; }
+        _showStep('method');
     };
 
-    window.confirmPayment = async function() {
-        if (!_payProgram) { showToast('กรุณาเลือกโปรแกรมก่อนครับ', '⚠️', 2500); return; }
+    // ── STEP: METHOD SELECTION ───────────────────────────────────
+    function _renderMethods() {
+        const price  = parseFloat(_payPricing[_prog] || 0);
+        const credit = parseFloat(_payMember.credit_balance || 0);
+        const points = parseInt(_payMember.points || 0);
+        const uc     = document.getElementById('pay-use-credit').checked;
+        const credited = uc ? Math.min(credit, price) : 0;
+        const final    = Math.max(0, price - credited);
 
-        const confirmBtn = document.getElementById('pay-confirm-btn');
-        confirmBtn.disabled  = true;
-        confirmBtn.textContent = '⏳ กำลังสร้าง QR...';
+        document.getElementById('pay-method-amount').textContent = `฿${final}`;
+
+        // Points redeem option
+        const ptRate   = _paySettings.redeem_points || 100;
+        const ptBaht   = _paySettings.redeem_baht   || 10;
+        const ptVal    = Math.floor(points / ptRate) * ptBaht;
+        const ptOptEl  = document.getElementById('pay-method-points');
+        if (points >= ptRate && liffUserId) {
+            ptOptEl.classList.remove('hidden');
+            document.getElementById('pay-pts-available').textContent =
+                `แต้ม ${points} → ลด ฿${Math.min(ptVal, final)}`;
+        } else { ptOptEl.classList.add('hidden'); }
+    }
+
+    // ── PAYMENT: Mobile Banking + QR → Beam ─────────────────────
+    window.payWithBeam = async function() {
+        const btn = document.getElementById('pay-beam-btn');
+        btn.disabled = true; btn.textContent = '⏳ กำลังสร้างลิ้งค์...';
 
         try {
-            const useCredit = document.getElementById('pay-use-credit').checked;
+            const uc  = document.getElementById('pay-use-credit').checked;
             const res = await fetch(`${PAYMENT_API}/payment/create`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    machine_id: _payMachineId,
-                    program:    _payProgram,
-                    user_id:    liffUserId || 'kiosk',
-                    use_credit: useCredit,
-                })
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({machine_id:_mid, program:_prog,
+                                      user_id: liffUserId||'kiosk', use_credit:uc})
             });
             const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.detail || 'ไม่สามารถสร้าง QR ได้');
-            }
+            if (!res.ok) throw new Error(data.detail || 'ไม่สามารถสร้างลิ้งค์ได้');
 
             if (data.status === 'free') {
-                // จ่ายด้วย credit ครบ ไม่ต้องแสดง QR
-                _showPayStep('success');
-                document.getElementById('pay-success-points').textContent =
-                    `✨ ใช้ credit ฟรี! ไม่มีค่าใช้จ่าย`;
+                _txId = data.tx_id;
+                _showSuccess(0, 0);
                 return;
             }
 
-            _payTxId = data.tx_id;
-            _showPayStep('qr');
+            _txId = data.tx_id;
+            // เปิด Beam checkout ใน tab ใหม่
+            window.open(data.payment_url, '_blank');
 
-            // แสดง QR
-            const iframe = document.getElementById('pay-qr-iframe');
-            iframe.onload = () => document.getElementById('pay-qr-loading').classList.add('hidden');
-            iframe.src = data.qr_url;
-            document.getElementById('pay-qr-link').href = data.qr_url;
-
-            // Countdown
-            const expireAt = new Date(data.expire_at);
-            _startCountdown(expireAt);
-
-            // Poll Firebase for payment status
-            _startPolling(data.tx_id);
+            // เริ่ม countdown + poll
+            _showStep('waiting');
+            _startCountdown(new Date(data.expire_at));
+            _startPoll(data.tx_id);
 
         } catch(e) {
             showToast(`❌ ${e.message}`, '⚠️', 5000);
-            confirmBtn.disabled   = false;
-            confirmBtn.textContent = '💳 จ่ายเงิน';
+        } finally {
+            btn.disabled = false; btn.textContent = '💳 Mobile Banking / QR';
         }
     };
 
+    // ── PAYMENT: Points Redemption ───────────────────────────────
+    window.payWithPoints = async function() {
+        const price   = parseFloat(_payPricing[_prog] || 0);
+        const points  = parseInt(_payMember.points || 0);
+        const ptRate  = _paySettings.redeem_points || 100;
+        const ptBaht  = _paySettings.redeem_baht   || 10;
+        const ptNeeded = Math.ceil(price / ptBaht) * ptRate;
+
+        if (points < ptNeeded) {
+            showToast(`แต้มไม่พอครับ (ต้องการ ${ptNeeded} แต้ม)`, '⚠️', 3000);
+            return;
+        }
+
+        // สร้าง TX สำหรับ points
+        try {
+            const res = await fetch(`${PAYMENT_API}/payment/create`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({machine_id:_mid, program:_prog,
+                                      user_id: liffUserId||'kiosk', use_credit: true})
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error');
+            _txId = data.tx_id;
+
+            if (data.status === 'free') {
+                _showSuccess(ptNeeded, price);
+            } else {
+                showToast('ยอดคงค้างสูงกว่าแต้ม กรุณาจ่ายส่วนต่างด้วย', '⚠️', 4000);
+                window.open(data.payment_url, '_blank');
+                _showStep('waiting');
+                _startCountdown(new Date(data.expire_at));
+                _startPoll(data.tx_id);
+            }
+        } catch(e) {
+            showToast(`❌ ${e.message}`, '⚠️', 4000);
+        }
+    };
+
+    // ── PAYMENT: Coin Slot ───────────────────────────────────────
+    window.payWithCoin = async function() {
+        if (!liffUserId) {
+            showToast('กรุณาเปิดใน LINE เพื่อสะสมแต้ม', '⚠️', 3000); return;
+        }
+        const price = parseFloat(_payPricing[_prog] || 0);
+        try {
+            const res = await fetch(`${PAYMENT_API}/payment/coin-slot`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({machine_id:_mid, program:_prog,
+                                      user_id: liffUserId, price})
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error');
+            _claimId = data.claim_id;
+            _showStep('coin');
+            _startCoinCountdown(180); // 3 นาที
+            _startCoinPoll(data.claim_id);
+        } catch(e) {
+            showToast(`❌ ${e.message}`, '⚠️', 4000);
+        }
+    };
+
+    window.cancelCoin = async function() {
+        if (_claimId) {
+            try { await fetch(`${PAYMENT_API}/payment/coin-slot/${_claimId}`, {method:'DELETE'}); } catch(e) {}
+            _claimId = '';
+        }
+        closePaymentModal();
+    };
+
+    // ── WAITING STEP ─────────────────────────────────────────────
     function _startCountdown(expireAt) {
-        clearInterval(_payCountdown);
-        _payCountdown = setInterval(() => {
-            const remaining = Math.max(0, expireAt - Date.now());
-            const mins = String(Math.floor(remaining / 60000)).padStart(1, '0');
-            const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
-            const el = document.getElementById('pay-countdown');
-            if (el) el.textContent = `${mins}:${secs}`;
-            if (remaining <= 0) {
-                clearInterval(_payCountdown);
-                _stopPolling();
-                if (_payStep === 'qr') {
-                    _showPayStep('error');
-                    document.getElementById('pay-error-msg').textContent =
-                        'QR หมดอายุแล้ว กรุณาสร้างใหม่';
+        clearInterval(_countdownTimer);
+        _countdownTimer = setInterval(() => {
+            const rem = Math.max(0, expireAt - Date.now());
+            const m   = String(Math.floor(rem / 60000)).padStart(1,'0');
+            const s   = String(Math.floor((rem % 60000)/1000)).padStart(2,'0');
+            const el  = document.getElementById('pay-countdown');
+            if (el) el.textContent = `${m}:${s}`;
+            if (rem <= 0) { clearInterval(_countdownTimer); _stopPoll(); _showStep('timeout'); }
+        }, 1000);
+    }
+
+    function _startPoll(txId) {
+        _stopPoll();
+        _pollTimer = setInterval(async () => {
+            try {
+                const r = await fetch(`${PAYMENT_API}/payment/status/${txId}`);
+                const d = await r.json();
+                if (d.status === 'started') {
+                    _stopPoll(); clearInterval(_countdownTimer);
+                    _showSuccess(0, d.points || 0);
+                } else if (d.status === 'credited') {
+                    _stopPoll(); clearInterval(_countdownTimer);
+                    _showStep('race');
+                } else if (['expired','failed','error'].includes(d.status)) {
+                    _stopPoll(); clearInterval(_countdownTimer);
+                    _showStep('timeout');
                 }
+            } catch(e) {}
+        }, 3000);
+    }
+
+    function _stopPoll() { clearInterval(_pollTimer); }
+
+    // ── COIN COUNTDOWN ───────────────────────────────────────────
+    function _startCoinCountdown(secs) {
+        clearInterval(_countdownTimer);
+        let remaining = secs;
+        _countdownTimer = setInterval(() => {
+            remaining--;
+            const m = String(Math.floor(remaining/60)).padStart(1,'0');
+            const s = String(remaining % 60).padStart(2,'0');
+            const el = document.getElementById('pay-coin-countdown');
+            if (el) el.textContent = `${m}:${s}`;
+            if (remaining <= 0) {
+                clearInterval(_countdownTimer); _stopPoll();
+                _showStep('coin-timeout');
             }
         }, 1000);
     }
 
-    function _startPolling(txId) {
-        _stopPolling();
-        // Poll ทุก 3 วิ
-        _payPollTimer = setInterval(async () => {
+    function _startCoinPoll(claimId) {
+        _stopPoll();
+        _pollTimer = setInterval(async () => {
             try {
-                const res  = await fetch(`${PAYMENT_API}/payment/status/${txId}`);
-                const data = await res.json();
-                const st   = data.status;
-
-                if (st === 'started') {
-                    _stopPolling();
-                    clearInterval(_payCountdown);
-                    _showPayStep('success');
-                    // แสดง points ที่ได้
-                    const final       = data.paid_amount || 0;
-                    const pts         = Math.floor(final / 10);
-                    const successPts  = document.getElementById('pay-success-points');
-                    if (successPts) {
-                        successPts.textContent = pts > 0 && liffUserId
-                            ? `🎁 ได้รับ +${pts} แต้มแล้ว!`
-                            : '✅ คำสั่งส่งไปยังเครื่องแล้ว';
-                    }
-                } else if (st === 'credited') {
-                    _stopPolling();
-                    clearInterval(_payCountdown);
-                    _showPayStep('error');
-                    document.getElementById('pay-error-msg').textContent =
-                        'เครื่องถูกใช้งานแล้ว ยอดเงินถูกเพิ่มเข้า credit balance ของคุณ กรุณาลองใหม่';
-                } else if (st === 'expired' || st === 'failed') {
-                    _stopPolling();
-                    clearInterval(_payCountdown);
-                    if (_payStep === 'qr') {
-                        _showPayStep('error');
-                        document.getElementById('pay-error-msg').textContent =
-                            'การชำระเงินไม่สำเร็จ กรุณาลองใหม่';
-                    }
+                const r = await fetch(`${PAYMENT_API}/payment/coin-slot/${claimId}`);
+                const d = await r.json();
+                if (d.status === 'done') {
+                    _stopPoll(); clearInterval(_countdownTimer);
+                    _showSuccess(0, d.points || 0, true);
+                } else if (['timeout','cancelled'].includes(d.status)) {
+                    _stopPoll(); clearInterval(_countdownTimer);
+                    _showStep('coin-timeout');
                 }
-            } catch(e) { /* ไม่แสดง error ระหว่าง poll */ }
+            } catch(e) {}
         }, 3000);
     }
 
-    function _stopPolling() { clearInterval(_payPollTimer); }
-
-    function _showPayStep(step) {
-        _payStep = step;
-        ['select','qr','success','error'].forEach(s => {
-            const el = document.getElementById(`pay-step-${s}`);
-            if (el) el.classList.toggle('hidden', s !== step);
-        });
-        // Reset confirm button
-        if (step === 'select') {
-            const btn = document.getElementById('pay-confirm-btn');
-            if (btn) { btn.disabled = false; btn.textContent = '💳 จ่ายเงิน'; }
+    // ── SUCCESS ──────────────────────────────────────────────────
+    function _showSuccess(pointsUsed, ptsEarned, isCoin = false) {
+        _showStep('success');
+        const pEl = document.getElementById('pay-success-pts');
+        if (pEl) {
+            if (isCoin) pEl.textContent = `🎉 บันทึกแต้มสำเร็จ! +${ptsEarned} แต้ม`;
+            else if (ptsEarned > 0) pEl.textContent = `🎁 ได้รับ +${ptsEarned} แต้มแล้ว!`;
+            else pEl.textContent = '✅ ส่งคำสั่งไปยังเครื่องแล้ว';
         }
-        // ซ่อน close button ตอน QR แสดงอยู่ (กันกดปิดโดยไม่ตั้งใจ)
-        const closeBtn = document.getElementById('pay-close-btn');
-        if (closeBtn) closeBtn.classList.toggle('opacity-30', step === 'qr');
+        // ชวนแจ้งเตือน
+        const notifyEl = document.getElementById('pay-success-notify');
+        if (notifyEl) notifyEl.classList.remove('hidden');
+        document.getElementById('pay-success-notify-mid').textContent = _mid;
     }
 
+    window.paySuccessNotify = function() {
+        notifyMe(_mid, document.getElementById('pay-machine-name').textContent);
+    };
+
     window.closePaymentModal = function() {
-        if (_payStep === 'qr') {
-            // ยืนยันก่อนปิดขณะ QR แสดง
-            if (!confirm('ยืนยันการยกเลิกการชำระเงิน?')) return;
+        if (_step === 'waiting' || _step === 'coin') {
+            if (!confirm('ยืนยันการยกเลิก? (ถ้าจ่ายแล้วยังได้รับบริการ)')) return;
         }
-        _stopPolling();
-        clearInterval(_payCountdown);
+        _stopPoll();
+        clearInterval(_countdownTimer);
         document.getElementById('payment-modal').classList.add('hidden');
         document.body.style.overflow = '';
-        // Clear iframe
-        const iframe = document.getElementById('pay-qr-iframe');
-        if (iframe) iframe.src = '';
-        const loading = document.getElementById('pay-qr-loading');
-        if (loading) loading.classList.remove('hidden');
+        _mid=''; _prog=''; _txId=''; _claimId='';
     };
 
     // ============================================================
@@ -1831,13 +1955,43 @@ function createMachineHTML(name, info) {
                     </button>`}
                     ${(info.subscriber_count > 0) ? `<div class="text-center text-[10px] text-slate-400 dark:text-slate-500 mt-1">มี ${info.subscriber_count} คน รอแจ้งเตือน</div>` : ''}
                     ` : `
-                    ${(!isAqua && (info?.status?.toLowerCase() === 'available' || !info?.status)) ? `
-                    <button onclick="openPaymentModal('${name}', '${displayName}')"
-                        class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black
-                               active:scale-95 transition-all"
-                        style="background:var(--brand);color:white">
-                        💳 จ่ายเงิน
-                    </button>` : ''}
+                    ${(() => {
+                        const st     = info?.status?.toLowerCase() || '';
+                        const isBusy = info?.finish_at && Date.parse(info.finish_at) > Date.now();
+                        const isAvail = st === 'available' || !st;
+                        const isError = ['offline','error','outoforder','unavailable'].includes(st);
+                        if (isError) return '';
+
+                        // Washer W1-W4: จ่ายได้เฉพาะตอน available
+                        if (isWasher && !isAqua) {
+                            return isAvail ? `
+                            <button onclick="openPaymentModal('${name}','${displayName}',false)"
+                                class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                                style="background:var(--brand);color:white">💳 จ่ายเงิน</button>` : '';
+                        }
+                        // Dryer D5-D8: available = จ่าย, busy = เพิ่มเวลาอบ
+                        if (!isWasher && !isAqua) {
+                            if (isAvail) return `
+                            <button onclick="openPaymentModal('${name}','${displayName}',false)"
+                                class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                                style="background:var(--brand);color:white">💳 จ่ายเงิน</button>`;
+                            if (isBusy || st === 'busy') return `
+                            <button onclick="openPaymentModal('${name}','${displayName}',true)"
+                                class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                                style="background:var(--s-dry);color:white">⏱️ เพิ่มเวลาอบ</button>`;
+                            return '';
+                        }
+                        // AQUA: จ่ายได้เสมอ
+                        if (isAqua) {
+                            const addTime = isBusy || st === 'busy';
+                            return `
+                            <button onclick="openPaymentModal('${name}','${displayName}',${addTime})"
+                                class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                                style="background:var(--brand);color:white">
+                                ${addTime ? '⏱️ เพิ่มรอบซัก' : '💳 จ่ายเงิน'}</button>`;
+                        }
+                        return '';
+                    })()}
                     `}
                 </div>
             </div>`;
@@ -2151,130 +2305,220 @@ function createMachineHTML(name, info) {
     </div>
 
     <!-- ══════════════════════════════════════════════════════
-         M2b: PAYMENT MODAL
+         M2b: PAYMENT MODAL (Beam)
     ═══════════════════════════════════════════════════════ -->
     <div id="payment-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-         style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"
-         onclick="if(event.target===this && _payStep==='select') closePaymentModal()">
-        <div class="w-full max-w-sm mx-auto rounded-t-3xl sm:rounded-3xl overflow-hidden"
-             style="background:var(--bg-card);max-height:92vh;overflow-y:auto">
+         style="background:rgba(0,0,0,0.65);backdrop-filter:blur(4px)"
+         onclick="if(event.target===this && !['waiting','coin'].includes(_step)) closePaymentModal()">
+    <div class="w-full max-w-sm mx-3 sm:mx-auto rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col"
+         style="background:var(--bg-card);max-height:92vh">
 
-            <!-- Header -->
-            <div class="flex items-center justify-between px-5 pt-5 pb-3">
-                <div>
-                    <div id="pay-machine-name" class="font-bold text-base" style="color:var(--text-main)"></div>
-                    <div id="pay-machine-type" class="text-xs mt-0.5" style="color:var(--text-muted)"></div>
-                </div>
-                <button onclick="closePaymentModal()" id="pay-close-btn"
-                    class="w-8 h-8 rounded-full flex items-center justify-center text-lg"
-                    style="background:var(--bg-page);color:var(--text-sub)">✕</button>
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 pt-5 pb-2 shrink-0">
+            <div>
+                <div id="pay-machine-name" class="font-black text-base" style="color:var(--text-main)"></div>
+                <div id="pay-machine-type" class="text-xs mt-0.5" style="color:var(--text-muted)"></div>
+            </div>
+            <button onclick="closePaymentModal()" class="w-8 h-8 rounded-full flex items-center justify-center"
+                style="background:var(--bg-page);color:var(--text-sub)">✕</button>
+        </div>
+        <div class="overflow-y-auto flex-grow">
+
+        <!-- ── STEP: intro ─────────────────────────────── -->
+        <div data-paystep="intro" class="px-5 pb-5">
+            <div class="text-center py-3">
+                <div class="text-3xl mb-2">👆</div>
+                <div id="pay-intro-title" class="font-bold text-sm mb-1" style="color:var(--text-main)"></div>
+                <div class="text-xs" style="color:var(--text-muted)">แล้วกลับมากด "ยืนยัน" เพื่อเลือกวิธีชำระ</div>
+            </div>
+            <div id="pay-intro-list" class="space-y-2 mb-4 p-3 rounded-2xl" style="background:var(--bg-page)"></div>
+            <button onclick="payIntroConfirm()"
+                class="w-full py-3 rounded-2xl font-bold text-sm active:scale-95 transition-all"
+                style="background:var(--brand);color:white">✅ ยืนยัน เลือกแล้ว</button>
+        </div>
+
+        <!-- ── STEP: checking ─────────────────────────── -->
+        <div data-paystep="checking" class="hidden px-5 pb-5 text-center py-10">
+            <div class="w-14 h-14 border-4 rounded-full mx-auto mb-4 animate-spin"
+                 style="border-color:var(--brand);border-top-color:transparent"></div>
+            <div class="font-semibold text-sm mb-1" style="color:var(--text-main)">กำลังตรวจสอบโปรแกรม...</div>
+            <div class="text-xs" style="color:var(--text-muted)">กำลังตรวจสอบโปรแกรมที่คุณเลือกที่หน้าเครื่อง</div>
+        </div>
+
+        <!-- ── STEP: program ──────────────────────────── -->
+        <div data-paystep="program" class="hidden px-5 pb-5">
+            <div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-muted)">เลือกโปรแกรม</div>
+            <div id="pay-prog-list" class="space-y-2 mb-3"></div>
+
+            <!-- Warning -->
+            <div id="pay-prog-warning" class="hidden text-[10px] px-3 py-2 rounded-xl mb-3"
+                 style="background:color-mix(in srgb,#f59e0b 12%,transparent);color:#b45309">
+                ⚠️ หากเปลี่ยนโปรแกรมในนี้ กรุณากดเปลี่ยนที่หน้าเครื่องให้ตรงกันด้วย
             </div>
 
-            <!-- ── Step 1: Select Program ───────────────────────────── -->
-            <div id="pay-step-select" class="px-5 pb-5">
-                <div class="text-xs font-bold uppercase tracking-wider mb-3" style="color:var(--text-muted)">เลือกโปรแกรม</div>
-                <div id="pay-program-list" class="space-y-2"></div>
-
-                <!-- Credit balance -->
-                <div id="pay-credit-section" class="hidden mt-4 p-3 rounded-2xl" style="background:var(--bg-page)">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-xs font-semibold" style="color:var(--text-main)">💰 Credit Balance</div>
-                            <div id="pay-credit-amount" class="text-sm font-black" style="color:var(--brand)">฿0</div>
-                        </div>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <span class="text-xs" style="color:var(--text-sub)">ใช้ credit</span>
-                            <input type="checkbox" id="pay-use-credit" class="w-4 h-4 accent-pink-500"
-                                onchange="updatePaymentSummary()"/>
-                        </label>
-                    </div>
+            <!-- Credit -->
+            <div id="pay-credit-section" class="hidden p-3 rounded-2xl mb-3" style="background:var(--bg-page)">
+                <div class="flex items-center justify-between">
+                    <div><div class="text-xs font-semibold" style="color:var(--text-main)">💰 Credit Balance</div>
+                    <div id="pay-credit-bal" class="font-black text-sm" style="color:var(--brand)">฿0</div></div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="text-xs" style="color:var(--text-sub)">ใช้ credit</span>
+                        <input type="checkbox" id="pay-use-credit" class="w-4 h-4 accent-pink-500" onchange="_updateSummary()"/>
+                    </label>
                 </div>
+            </div>
 
-                <!-- Summary -->
-                <div class="mt-4 p-3 rounded-2xl" style="background:var(--bg-page)">
-                    <div class="flex justify-between text-xs mb-1" style="color:var(--text-muted)">
-                        <span>ราคาปกติ</span><span id="pay-original">฿0</span>
-                    </div>
-                    <div class="flex justify-between text-xs mb-1 hidden" id="pay-discount-row" style="color:#10b981">
-                        <span>ส่วนลดสมาชิกใหม่</span><span id="pay-discount-val"></span>
-                    </div>
-                    <div class="flex justify-between text-xs mb-2 hidden" id="pay-credit-row" style="color:#f59e0b">
-                        <span>ใช้ credit</span><span id="pay-credit-val"></span>
-                    </div>
-                    <div class="border-t pt-2 flex justify-between font-black" style="border-color:var(--border)">
-                        <span style="color:var(--text-main)">ยอดชำระ</span>
-                        <span id="pay-final" style="color:var(--brand)">฿0</span>
-                    </div>
-                    <div id="pay-points-preview" class="text-center text-xs mt-2 font-semibold" style="color:var(--text-muted)"></div>
+            <!-- Welcome -->
+            <div id="pay-welcome-pts" class="hidden text-[10px] text-center py-1.5 rounded-xl mb-3"
+                 style="background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)">
+                🎁 สมาชิกใหม่! รับ +50 แต้ม Welcome Bonus
+            </div>
+
+            <!-- Summary -->
+            <div class="p-3 rounded-2xl mb-3" style="background:var(--bg-page)">
+                <div class="flex justify-between text-xs mb-1" style="color:var(--text-muted)">
+                    <span>ราคา</span><span id="pay-summary-orig">฿0</span>
                 </div>
+                <div id="pay-summary-credit-row" class="hidden flex justify-between text-xs mb-1" style="color:#f59e0b">
+                    <span>ใช้ credit</span><span id="pay-summary-credit-val">-฿0</span>
+                </div>
+                <div class="border-t pt-2 flex justify-between font-black" style="border-color:var(--border)">
+                    <span style="color:var(--text-main)">ยอดชำระ</span>
+                    <span id="pay-summary-final" style="color:var(--brand)">฿0</span>
+                </div>
+                <div id="pay-summary-pts" class="text-center text-xs mt-1.5 font-semibold" style="color:var(--text-muted)"></div>
+            </div>
 
-                <button id="pay-confirm-btn" onclick="confirmPayment()"
-                    class="mt-4 w-full py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95"
+            <button onclick="progToMethod()"
+                class="w-full py-3 rounded-2xl font-bold text-sm active:scale-95 transition-all"
+                style="background:var(--brand);color:white">ถัดไป →</button>
+        </div>
+
+        <!-- ── STEP: method ───────────────────────────── -->
+        <div data-paystep="method" class="hidden px-5 pb-5">
+            <div class="text-center mb-3">
+                <div class="text-xs" style="color:var(--text-muted)">ยอดชำระ</div>
+                <div id="pay-method-amount" class="text-3xl font-black" style="color:var(--brand)">฿0</div>
+            </div>
+            <div class="space-y-2">
+                <!-- Mobile Banking / QR -->
+                <button id="pay-beam-btn" onclick="payWithBeam()"
+                    class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-95 transition-all"
                     style="background:var(--brand);color:white">
-                    💳 จ่ายเงิน
+                    <span class="text-xl">🏦</span>
+                    <div>
+                        <div class="font-bold text-sm">Mobile Banking / QR PromptPay</div>
+                        <div class="text-[10px] opacity-75">SCB, KBank, KTB, BBL และอื่นๆ</div>
+                    </div>
+                    <span class="ml-auto text-xs opacity-75">→</span>
+                </button>
+
+                <!-- Points -->
+                <div id="pay-method-points" class="hidden">
+                    <button onclick="payWithPoints()"
+                        class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-95 transition-all border-2"
+                        style="border-color:var(--brand);color:var(--text-main)">
+                        <span class="text-xl">⭐</span>
+                        <div>
+                            <div class="font-bold text-sm">แลกแต้มสะสม</div>
+                            <div id="pay-pts-available" class="text-[10px]" style="color:var(--text-muted)"></div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Coin Slot -->
+                <button onclick="payWithCoin()"
+                    class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-95 transition-all border"
+                    style="border-color:var(--border);color:var(--text-main)">
+                    <span class="text-xl">🪙</span>
+                    <div>
+                        <div class="font-bold text-sm">หยอดเหรียญ (สะสมแต้ม)</div>
+                        <div class="text-[10px]" style="color:var(--text-muted)">หยอดเหรียญที่เครื่องแล้วสะสมแต้มได้เลย</div>
+                    </div>
                 </button>
             </div>
-
-            <!-- ── Step 2: QR Code ─────────────────────────────────── -->
-            <div id="pay-step-qr" class="hidden px-5 pb-6 text-center">
-                <div class="text-sm font-bold mb-1" style="color:var(--text-main)">สแกน QR เพื่อชำระเงิน</div>
-                <div class="text-xs mb-3" style="color:var(--text-muted)">ผ่าน SCB / KBank / E-Wallet ที่รองรับ</div>
-
-                <!-- QR iframe -->
-                <div class="relative mx-auto w-fit rounded-2xl overflow-hidden shadow-lg mb-3"
-                     style="border:3px solid var(--brand)">
-                    <iframe id="pay-qr-iframe" src="" width="280" height="360"
-                        style="border:none;display:block;background:white"></iframe>
-                    <!-- Loading overlay -->
-                    <div id="pay-qr-loading" class="absolute inset-0 flex items-center justify-center"
-                         style="background:white">
-                        <div class="text-center">
-                            <div class="w-10 h-10 border-4 rounded-full mx-auto mb-2 animate-spin"
-                                 style="border-color:var(--brand);border-top-color:transparent"></div>
-                            <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด QR...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Countdown -->
-                <div class="flex items-center justify-center gap-2 mb-3">
-                    <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--brand)"></div>
-                    <span class="text-xs font-semibold" style="color:var(--text-muted)">
-                        หมดอายุใน <span id="pay-countdown" class="font-black" style="color:var(--brand)">5:00</span>
-                    </span>
-                </div>
-
-                <div class="text-xs px-4 py-2 rounded-xl" style="background:var(--bg-page);color:var(--text-muted)">
-                    กด <a id="pay-qr-link" href="#" target="_blank"
-                        class="font-bold underline" style="color:var(--brand)">เปิดหน้าชำระเงิน</a>
-                    ถ้าสแกนไม่ได้
-                </div>
-            </div>
-
-            <!-- ── Step 3: Success ─────────────────────────────────── -->
-            <div id="pay-step-success" class="hidden px-5 pb-6 text-center">
-                <div class="text-5xl mb-3">✅</div>
-                <div class="font-black text-lg mb-1" style="color:var(--text-main)">ชำระเงินสำเร็จ!</div>
-                <div class="text-sm mb-4" style="color:var(--text-muted)">เครื่องจะเริ่มทำงานในไม่ช้า</div>
-                <div id="pay-success-points" class="text-sm font-bold py-2 px-4 rounded-xl mb-4"
-                     style="background:var(--bg-page);color:var(--brand)"></div>
-                <button onclick="closePaymentModal()"
-                    class="w-full py-3 rounded-2xl font-bold text-sm"
-                    style="background:var(--brand);color:white">ปิด</button>
-            </div>
-
-            <!-- ── Step 4: Error / Race Condition ─────────────────── -->
-            <div id="pay-step-error" class="hidden px-5 pb-6 text-center">
-                <div class="text-4xl mb-3">⚠️</div>
-                <div class="font-bold text-base mb-2" style="color:var(--text-main)">เครื่องไม่ว่างแล้ว</div>
-                <div id="pay-error-msg" class="text-sm mb-4" style="color:var(--text-muted)"></div>
-                <button onclick="closePaymentModal()"
-                    class="w-full py-3 rounded-2xl font-bold text-sm"
-                    style="background:var(--bg-page);color:var(--text-main)">ปิด</button>
-            </div>
-
+            <button onclick="_showStep('program')" class="w-full mt-3 py-2 text-xs rounded-xl"
+                style="color:var(--text-muted)">← ย้อนกลับ</button>
         </div>
+
+        <!-- ── STEP: waiting ──────────────────────────── -->
+        <div data-paystep="waiting" class="hidden px-5 pb-5 text-center py-6">
+            <div class="text-4xl mb-3">💳</div>
+            <div class="font-bold text-sm mb-1" style="color:var(--text-main)">รอการชำระเงิน</div>
+            <div class="text-xs mb-4" style="color:var(--text-muted)">หน้าชำระเงินเปิดในแท็บใหม่แล้วครับ</div>
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-4" style="background:var(--bg-page)">
+                <div class="w-2 h-2 rounded-full animate-pulse" style="background:var(--brand)"></div>
+                <span class="text-sm font-mono font-bold" id="pay-countdown" style="color:var(--brand)">5:00</span>
+                <span class="text-xs" style="color:var(--text-muted)">หมดอายุใน</span>
+            </div>
+            <div class="text-xs" style="color:var(--text-muted)">หน้านี้จะอัปเดตอัตโนมัติเมื่อชำระเสร็จ</div>
+        </div>
+
+        <!-- ── STEP: coin ─────────────────────────────── -->
+        <div data-paystep="coin" class="hidden px-5 pb-5 text-center py-6">
+            <div class="text-4xl mb-3">🪙</div>
+            <div class="font-bold text-sm mb-1" style="color:var(--text-main)">กรุณาหยอดเหรียญที่เครื่อง</div>
+            <div class="text-xs mb-4" style="color:var(--text-muted)">ระบบจะบันทึกแต้มทันทีที่เครื่องเริ่มทำงาน</div>
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-4" style="background:var(--bg-page)">
+                <div class="w-2 h-2 rounded-full animate-pulse bg-amber-500"></div>
+                <span class="text-sm font-mono font-bold text-amber-500" id="pay-coin-countdown">3:00</span>
+                <span class="text-xs" style="color:var(--text-muted)">เหลือเวลา</span>
+            </div>
+            <button onclick="cancelCoin()" class="text-xs px-4 py-2 rounded-xl"
+                style="background:var(--bg-page);color:var(--text-muted)">ยกเลิกการจองสิทธิ์</button>
+        </div>
+
+        <!-- ── STEP: success ──────────────────────────── -->
+        <div data-paystep="success" class="hidden px-5 pb-6 text-center py-6">
+            <div class="text-5xl mb-3">✅</div>
+            <div class="font-black text-lg mb-1" style="color:var(--text-main)">สำเร็จ!</div>
+            <div id="pay-success-pts" class="text-sm py-2 px-4 rounded-xl mb-4 font-semibold"
+                 style="background:var(--bg-page);color:var(--brand)"></div>
+            <div id="pay-success-notify" class="hidden mb-4">
+                <div class="text-xs mb-2" style="color:var(--text-muted)">ต้องการรับแจ้งเตือนเมื่อเสร็จไหม?</div>
+                <button onclick="paySuccessNotify()"
+                    class="px-4 py-2 rounded-xl text-xs font-bold border-2 active:scale-95 transition-all"
+                    style="border-color:var(--brand);color:var(--brand)">
+                    🔔 แจ้งเตือนฉัน <span id="pay-success-notify-mid"></span>
+                </button>
+            </div>
+            <button onclick="closePaymentModal()" class="w-full py-3 rounded-2xl font-bold text-sm"
+                style="background:var(--brand);color:white">ปิด</button>
+        </div>
+
+        <!-- ── STEP: race condition ───────────────────── -->
+        <div data-paystep="race" class="hidden px-5 pb-6 text-center py-6">
+            <div class="text-4xl mb-3">⚠️</div>
+            <div class="font-bold text-base mb-2" style="color:var(--text-main)">เครื่องถูกใช้งานแล้ว</div>
+            <div class="text-sm mb-4" style="color:var(--text-muted)">
+                เงินของคุณถูกเพิ่มเข้า credit balance แล้ว<br>สามารถใช้ได้ทันทีสำหรับการซักครั้งถัดไป
+            </div>
+            <button onclick="closePaymentModal()" class="w-full py-3 rounded-2xl font-bold text-sm"
+                style="background:var(--bg-page);color:var(--text-main)">ปิด</button>
+        </div>
+
+        <!-- ── STEP: timeout ──────────────────────────── -->
+        <div data-paystep="timeout" class="hidden px-5 pb-6 text-center py-6">
+            <div class="text-4xl mb-3">⏰</div>
+            <div class="font-bold text-base mb-2" style="color:var(--text-main)">หมดเวลา</div>
+            <div class="text-sm mb-4" style="color:var(--text-muted)">QR หรือลิ้งค์หมดอายุแล้ว กรุณาลองใหม่</div>
+            <button onclick="_showStep('method')" class="w-full py-3 rounded-2xl font-bold text-sm"
+                style="background:var(--brand);color:white">ลองอีกครั้ง</button>
+        </div>
+
+        <!-- ── STEP: coin-timeout ─────────────────────── -->
+        <div data-paystep="coin-timeout" class="hidden px-5 pb-6 text-center py-6">
+            <div class="text-4xl mb-3">⏰</div>
+            <div class="font-bold text-base mb-2" style="color:var(--text-main)">หมดเวลา 3 นาที</div>
+            <div class="text-sm mb-4" style="color:var(--text-muted)">ไม่พบการเริ่มทำงานของเครื่อง กรุณาลองใหม่</div>
+            <button onclick="closePaymentModal()" class="w-full py-3 rounded-2xl font-bold text-sm"
+                style="background:var(--bg-page);color:var(--text-main)">ปิด</button>
+        </div>
+
+        </div><!-- end scroll area -->
     </div>
+    </div>
+
 
 </body>
 </html>

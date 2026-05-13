@@ -504,6 +504,17 @@
                                 ⚠️ ต้องตั้ง env vars ใน Railway ทั้งสองชุด:<br/>
                                 BEAM_PLAYGROUND_* และ BEAM_PRODUCTION_*
                             </div>
+                            <div class="pt-2 border-t" style="border-color:var(--border)">
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <div>
+                                        <div class="text-xs font-semibold" style="color:var(--text-main)">🔒 ปิดการชำระผ่าน Beam</div>
+                                        <div class="text-[10px]" style="color:var(--text-muted)">เปิดให้จ่ายเฉพาะแลกแต้มเท่านั้น</div>
+                                    </div>
+                                    <input type="checkbox" id="beam-disabled-toggle"
+                                        onchange="saveBeamDisabled(this.checked)"
+                                        class="w-4 h-4 accent-red-500"/>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -1349,10 +1360,10 @@
         warm:   { label: '🌤 น้ำอุ่น',   desc: 'ซักคราบมัน เสื้อผ้าประจำวัน', temp: 'Warm' },
         hot:    { label: '🔥 น้ำร้อน',  desc: 'ฆ่าเชื้อโรค ผ้าฝ้าย x2 แต้ม', temp: 'Hot'  },
         single: { label: '🌀 อบผ้า',    desc: 'โปรแกรมมาตรฐาน',       temp: ''     },
-        p1:     { label: '🟢 P1 (เบา)', desc: 'น้ำหนักน้อย x2 แต้ม',   temp: 'P1'   },
-        p2:     { label: '🟡 P2 (กลาง)', desc: 'น้ำหนักปานกลาง x2 แต้ม', temp: 'P2'  },
-        p3:     { label: '🟠 P3 (หนัก)', desc: 'น้ำหนักมาก x2 แต้ม',   temp: 'P3'   },
-        p4:     { label: '🔴 P4 (หนักพิเศษ)', desc: 'น้ำหนักสูงสุด x2 แต้ม', temp: 'P4' },
+        p1:     { label: '🟢 P1-ซักอบ พิเศษ',    desc: 'ซัก+อบในรอบเดียว x2 แต้ม',    temp: 'P1' },
+        p2:     { label: '🟡 P2-ซักอบ มาตรฐาน', desc: 'ซัก+อบ มาตรฐาน x2 แต้ม',       temp: 'P2' },
+        p3:     { label: '🟠 P3-ซักน้ำอุ่น',    desc: 'ซักด้วยน้ำอุ่น x2 แต้ม',        temp: 'P3' },
+        p4:     { label: '🔴 P4-ซักน้ำเย็น',    desc: 'ซักด้วยน้ำเย็น x2 แต้ม',        temp: 'P4' },
     };
 
     // ── OPEN MODAL ───────────────────────────────────────────────
@@ -1381,7 +1392,11 @@
         document.body.style.overflow = 'hidden';
 
         // เลือก step แรกตาม machine type
-        if (isWasher(machineId) || isAqua(machineId)) {
+        if (isAqua(machineId) && addTime) {
+            // AQUA เพิ่มรอบซัก → extend step (เหมือน dryer)
+            _prog = 'p1'; _customPrice = null;
+            _showStep('dryer-extend');
+        } else if (isWasher(machineId) || isAqua(machineId)) {
             _showStep('intro');
         } else if (addTime) {
             // Dryer เพิ่มเวลา → เลือกจำนวนเงินก่อน
@@ -1558,6 +1573,11 @@
     // ── STEP: METHOD SELECTION ───────────────────────────────────
     function _renderMethods() {
         const price  = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
+        // ตรวจ beam_payment_disabled จาก Firebase
+        get(ref(database,'laundry_system/settings/beam_payment_disabled')).then(s => {
+            const beamBtn = document.getElementById('pay-btn-beam');
+            if (beamBtn) beamBtn.classList.toggle('hidden', s.exists() && s.val() === true);
+        }).catch(()=>{});
         const credit = parseFloat(_payMember.credit_balance || 0);
         const points = parseInt(_payMember.points || 0);
         const uc     = document.getElementById('pay-use-credit').checked;
@@ -1588,7 +1608,8 @@
             const res = await fetch(`${PAYMENT_API}/payment/create`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({machine_id:_mid, program:_prog,
-                                      user_id: liffUserId||'kiosk', use_credit:uc})
+                                      user_id: liffUserId||'kiosk', use_credit:uc,
+                                      custom_price: _customPrice})   // เพิ่มเวลาอบ/เพิ่มรอบซัก
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'ไม่สามารถสร้างลิ้งค์ได้');
@@ -1742,7 +1763,7 @@
 
     // ── Dryer Extend helpers ─────────────────────────────────────
     window._dryerExtendAdj = function(delta) {
-        const maxVal = parseInt(_paySettings.dryer_extend_max || 50);
+        const maxVal = window._extendMaxVal || parseInt(_paySettings.dryer_extend_max || 50);
         _extendAmount = Math.min(maxVal, Math.max(10, _extendAmount + delta));
         const disp = document.getElementById('extend-amount-display');
         if (disp) disp.textContent = `฿${_extendAmount}`;
@@ -1757,11 +1778,22 @@
     function _renderDryerExtend() {
         _extendAmount = 10;
         _customPrice  = null;
-        const maxVal  = parseInt(_paySettings.dryer_extend_max || 50);
-        const disp    = document.getElementById('extend-amount-display');
-        const hint    = document.getElementById('extend-max-hint');
+        const isAquaMid = isAqua(_mid);
+        // โหลด max จาก Firebase ตาม machine type
+        const settingKey = isAquaMid ? 'laundry_system/settings/aqua_extend_max' : 'laundry_system/settings/dryer_extend_max';
+        const defaultMax = isAquaMid ? 100 : 50;
+        get(ref(database, settingKey)).then(s => {
+            const maxVal = s.exists() ? s.val() : defaultMax;
+            const hint = document.getElementById('extend-max-hint');
+            if (hint) hint.textContent = `ขั้นต่ำ ฿10 · สูงสุด ฿${maxVal}`;
+            // เก็บ max ไว้ใช้ใน adj
+            window._extendMaxVal = maxVal;
+        }).catch(() => { window._extendMaxVal = defaultMax; });
+        window._extendMaxVal = defaultMax;
+        const disp = document.getElementById('extend-amount-display');
+        const hint = document.getElementById('extend-max-hint');
         if (disp) disp.textContent = `฿${_extendAmount}`;
-        if (hint) hint.textContent = `ขั้นต่ำ ฿10 · สูงสุด ฿${maxVal}`;
+        if (hint) hint.textContent = `ขั้นต่ำ ฿10 · สูงสุด ฿${defaultMax}`;
     }
 
     // รอเครื่องเปลี่ยนสถานะ → ReadyToStart แล้วค่อยแสดง success
@@ -1923,9 +1955,10 @@
 
     async function loadPricing() {
         try {
-            const [pSnap, extSnap] = await Promise.all([
+            const [pSnap, extSnap, aquaExtSnap] = await Promise.all([
                 get(ref(database, 'laundry_system/pricing')),
                 get(ref(database, 'laundry_system/settings/dryer_extend_max')),
+                get(ref(database, 'laundry_system/settings/aqua_extend_max')),
             ]);
             _pricing = pSnap.exists() ? pSnap.val() : {};
             Object.keys(DEFAULT_PRICING).forEach(mid => {
@@ -1933,6 +1966,8 @@
             });
             const extEl = document.getElementById('dryer-extend-max');
             if (extEl) extEl.value = extSnap.exists() ? extSnap.val() : 50;
+            const aquaEl = document.getElementById('aqua-extend-max');
+            if (aquaEl) aquaEl.value = aquaExtSnap.exists() ? aquaExtSnap.val() : 100;
         } catch(e) {
             _pricing = JSON.parse(JSON.stringify(DEFAULT_PRICING));
         }
@@ -1992,19 +2027,34 @@
                     <div class="text-center"><div class="text-[10px] mb-1" style="color:var(--text-muted)">${pg.toUpperCase()}</div>
                     <input data-mid="${mid}" data-program="${pg}" type="number" min="0" value="${p[pg]}" class="${iCls}" style="${iSty}"/></div>`).join('')}
                 </div></div>`;
-        }).join('') + `<button onclick="savePricing('aqua')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา AQUA</button>`;
+        }).join('') + `
+        <div class="mt-3 pt-3 border-t" style="border-color:var(--border)">
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <div class="text-xs font-semibold" style="color:var(--text-main)">⏱️ วงเงินสูงสุด เพิ่มรอบซัก</div>
+                    <div class="text-[10px]" style="color:var(--text-muted)">ผู้ใช้เลือกได้ ฿10 ถึงค่านี้</div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-xs" style="color:var(--text-muted)">฿</span>
+                    <input id="aqua-extend-max" type="number" min="10" step="10" value="100"
+                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                </div>
+            </div>
+        </div>
+        <button onclick="savePricing('aqua')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา AQUA</button>`;
     }
 
     window.savePricing = async function(group) {
         const groupMap = {washer:['W1','W2','W3','W4'],dryer:['D5','D6','D7','D8'],aqua:['AQUA9','AQUA10']};
         const updates = {};
-        // บันทึก dryer_extend_max ถ้า group = dryer
         if (group === 'dryer') {
             const extEl = document.getElementById('dryer-extend-max');
-            if (extEl) {
-                const maxVal = Math.max(10, parseInt(extEl.value)||50);
-                await set(ref(database,'laundry_system/settings/dryer_extend_max'), maxVal);
-            }
+            if (extEl) await set(ref(database,'laundry_system/settings/dryer_extend_max'), Math.max(10, parseInt(extEl.value)||50));
+        }
+        if (group === 'aqua') {
+            const aquaEl = document.getElementById('aqua-extend-max');
+            if (aquaEl) await set(ref(database,'laundry_system/settings/aqua_extend_max'), Math.max(10, parseInt(aquaEl.value)||100));
         }
         (groupMap[group]||[]).forEach(mid => {
             const data = {label: (_pricing[mid]||DEFAULT_PRICING[mid]).label};
@@ -2081,11 +2131,20 @@
     // ── Beam Environment (ข้อ 1) ─────────────────────────────────
     async function loadBeamSettings() {
         try {
-            const snap = await get(ref(database,'laundry_system/settings/beam_env'));
-            const env = snap.exists() ? snap.val() : 'playground';
-            _updateBeamEnvUI(env);
+            const [envSnap, disSnap] = await Promise.all([
+                get(ref(database,'laundry_system/settings/beam_env')),
+                get(ref(database,'laundry_system/settings/beam_payment_disabled')),
+            ]);
+            _updateBeamEnvUI(envSnap.exists() ? envSnap.val() : 'playground');
+            const disEl = document.getElementById('beam-disabled-toggle');
+            if (disEl) disEl.checked = disSnap.exists() ? disSnap.val() : false;
         } catch(e) { console.error('loadBeamSettings:', e); }
     }
+
+    window.saveBeamDisabled = async function(disabled) {
+        await set(ref(database,'laundry_system/settings/beam_payment_disabled'), disabled);
+        showToast(disabled ? '🔒 ปิด Beam แล้ว — รับเฉพาะแลกแต้ม' : '✅ เปิด Beam แล้ว', disabled?'🔴':'✅', 2500);
+    };
 
     function _updateBeamEnvUI(env) {
         const isProd = env === 'production';
@@ -2400,7 +2459,7 @@ function createMachineHTML(name, info) {
                             return `
                             <button onclick="openPaymentModal('${name}','${displayName}',${addTime})"
                                 class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
-                                style="background:var(--brand);color:white">
+                                style="background:${addTime ? 'var(--s-dry)' : 'var(--brand)'};color:white">
                                 ${addTime ? '⏱️ เพิ่มรอบซัก' : '💳 จ่ายเงิน'}</button>`;
                         }
                         return '';

@@ -1317,7 +1317,7 @@
     // State
     let _mid = '', _prog = '', _step = 'intro', _txId = '', _claimId = '';
     let _payPricing = {}, _payMember = {}, _paySettings = {}, _addTime = false;
-    let _countdownTimer = null, _pollTimer = null;
+    let _countdownTimer = null, _pollTimer = null, _txListener = null, _machineListener = null;
 
     // ── Machine type helpers ─────────────────────────────────────
     const isWasher = (mid) => mid.startsWith('W');
@@ -1673,25 +1673,93 @@
 
     function _startPoll(txId) {
         _stopPoll();
+        // Firebase real-time listener (เร็วกว่า HTTP poll มาก — ตอบสนองทันทีเมื่อ webhook ยิงมา)
+        const txRef = ref(database, `laundry_system/transactions/${txId}`);
+        _txListener = onValue(txRef, (snap) => {
+            if (!snap.exists()) return;
+            const d = snap.val();
+            const s = d.status || '';
+            if (s === 'started') {
+                // TX confirmed → ไปรอ machine ReadyToStart ก่อนค่อยแสดง success
+                if (_txListener) { _txListener(); _txListener = null; }
+                clearInterval(_pollTimer);
+                _startMachineWatch(_mid, d.points_earned || 0);
+            } else if (s === 'credited') {
+                _stopPoll(); clearInterval(_countdownTimer);
+                _showStep('race');
+            } else if (['expired','failed','error','failed_no_credit'].includes(s)) {
+                _stopPoll(); clearInterval(_countdownTimer);
+                _showStep('timeout');
+            }
+        });
+        // HTTP poll เป็น backup (ทุก 5 วิ — กรณี Firebase listener ขาด)
         _pollTimer = setInterval(async () => {
             try {
                 const r = await fetch(`${PAYMENT_API}/payment/status/${txId}`);
                 const d = await r.json();
                 if (d.status === 'started') {
-                    _stopPoll(); clearInterval(_countdownTimer);
-                    _showSuccess(0, d.points || 0);
-                } else if (d.status === 'credited') {
-                    _stopPoll(); clearInterval(_countdownTimer);
-                    _showStep('race');
-                } else if (['expired','failed','error'].includes(d.status)) {
-                    _stopPoll(); clearInterval(_countdownTimer);
-                    _showStep('timeout');
+                    clearInterval(_pollTimer);
+                    if (_txListener) { _txListener(); _txListener = null; }
+                    _startMachineWatch(_mid, d.points||0);
                 }
+                else if (d.status === 'credited') { _stopPoll(); clearInterval(_countdownTimer); _showStep('race'); }
+                else if (['expired','failed','error'].includes(d.status)) { _stopPoll(); clearInterval(_countdownTimer); _showStep('timeout'); }
             } catch(e) {}
-        }, 3000);
+        }, 5000);
     }
 
-    function _stopPoll() { clearInterval(_pollTimer); }
+    function _stopPoll() {
+        clearInterval(_pollTimer);
+        if (_txListener)     { _txListener();     _txListener = null; }
+        if (_machineListener){ _machineListener(); _machineListener = null; }
+    }
+
+    // รอเครื่องเปลี่ยนสถานะ → ReadyToStart แล้วค่อยแสดง success
+    function _startMachineWatch(mid, ptsEarned) {
+        _showStep('starting');
+        if (_machineListener) { _machineListener(); _machineListener = null; }
+
+        const machRef = ref(database, `laundry_system/machines/${mid}`);
+        let _timeout = setTimeout(() => {
+            // timeout 2 นาที — ถ้าเครื่องไม่ตอบ แสดง success ไปก่อน
+            if (_machineListener) { _machineListener(); _machineListener = null; }
+            _finalizeSuccess(ptsEarned);
+        }, 120000);
+
+        _machineListener = onValue(machRef, (snap) => {
+            if (!snap.exists()) return;
+            const st = (snap.val().status || '').toLowerCase();
+            const isDryer = mid.startsWith('D');
+            const isAqua  = mid.startsWith('AQUA');
+            // Washer: รอ readytostart | Dryer/AQUA: รอ busy หรือ inuse
+            const ready = (isDryer || isAqua)
+                ? ['busy','inuse','running'].includes(st)
+                : ['readytostart','busy','inuse','running'].includes(st);
+            if (ready) {
+                clearTimeout(_timeout);
+                if (_machineListener) { _machineListener(); _machineListener = null; }
+                _finalizeSuccess(ptsEarned);
+            }
+        });
+    }
+
+    function _finalizeSuccess(ptsEarned) {
+        clearInterval(_countdownTimer);
+        _showSuccess(0, ptsEarned);
+        // countdown 15 วิ แล้วปิด modal อัตโนมัติ
+        let secsLeft = 15;
+        const cdEl = document.getElementById('pay-success-countdown');
+        if (cdEl) cdEl.textContent = secsLeft;
+        const cdTimer = setInterval(() => {
+            secsLeft--;
+            if (cdEl) cdEl.textContent = secsLeft;
+            if (secsLeft <= 0) {
+                clearInterval(cdTimer);
+                const modal = document.getElementById('payment-modal');
+                if (modal && !modal.classList.contains('hidden')) closePaymentModal();
+            }
+        }, 1000);
+    }
 
     // ── COIN COUNTDOWN ───────────────────────────────────────────
     function _startCoinCountdown(secs) {
@@ -2732,12 +2800,34 @@ function createMachineHTML(name, info) {
         </div>
 
         <!-- ── STEP: success ──────────────────────────── -->
+        <!-- ── STEP: starting (รอเครื่อง ReadyToStart) ──── -->
+        <div data-paystep="starting" class="hidden px-5 pb-6 text-center py-6">
+            <div class="flex justify-center mb-4">
+                <div class="w-14 h-14 rounded-full border-4 border-t-transparent animate-spin"
+                     style="border-color:var(--brand);border-top-color:transparent"></div>
+            </div>
+            <div class="font-bold text-base mb-2" style="color:var(--text-main)">กำลังสั่งเครื่อง...</div>
+            <div class="text-sm mb-1" style="color:var(--text-sub)">ชำระเงินสำเร็จแล้ว</div>
+            <div class="text-xs" style="color:var(--text-muted)">รอเครื่องตอบรับ กรุณาอย่าปิดหน้านี้</div>
+        </div>
+
         <div data-paystep="success" class="hidden px-5 pb-6 text-center py-6">
             <div class="text-5xl mb-3">✅</div>
-            <div class="font-black text-lg mb-1" style="color:var(--text-main)">สำเร็จ!</div>
-            <div id="pay-success-pts" class="text-sm py-2 px-4 rounded-xl mb-4 font-semibold"
+            <div class="font-black text-lg mb-1" style="color:var(--text-main)">ชำระเงินสำเร็จ!</div>
+            <div id="pay-success-pts" class="text-sm py-2 px-4 rounded-xl mb-3 font-semibold"
                  style="background:var(--bg-page);color:var(--brand)"></div>
-            <div id="pay-success-notify" class="hidden mb-4">
+            <!-- ข้อความเตือนกด Start -->
+            <div class="rounded-2xl px-4 py-3 mb-4 text-left"
+                 style="background:color-mix(in srgb,#f59e0b 15%,transparent);border:1.5px solid #f59e0b">
+                <div class="font-bold text-sm mb-1" style="color:#f59e0b">⚠️ ขั้นตอนถัดไป</div>
+                <div class="text-sm font-semibold" style="color:var(--text-main)">
+                    กรุณากดปุ่ม <span class="px-1.5 py-0.5 rounded font-black"
+                        style="background:#f59e0b;color:white">START</span>
+                    ที่หน้าเครื่องเพื่อเริ่มต้นการทำงาน
+                </div>
+                <div class="text-xs mt-1" style="color:var(--text-muted)">เครื่องพร้อมรับคำสั่งแล้ว</div>
+            </div>
+            <div id="pay-success-notify" class="hidden mb-3">
                 <div class="text-xs mb-2" style="color:var(--text-muted)">ต้องการรับแจ้งเตือนเมื่อเสร็จไหม?</div>
                 <button onclick="paySuccessNotify()"
                     class="px-4 py-2 rounded-xl text-xs font-bold border-2 active:scale-95 transition-all"
@@ -2745,8 +2835,12 @@ function createMachineHTML(name, info) {
                     🔔 แจ้งเตือนฉัน <span id="pay-success-notify-mid"></span>
                 </button>
             </div>
+            <!-- countdown + ปุ่มยืนยัน -->
+            <div class="text-xs mb-2" style="color:var(--text-muted)">
+                ปิดอัตโนมัติใน <span id="pay-success-countdown">15</span> วินาที
+            </div>
             <button onclick="closePaymentModal()" class="w-full py-3 rounded-2xl font-bold text-sm"
-                style="background:var(--brand);color:white">ปิด</button>
+                style="background:var(--brand);color:white">✅ รับทราบ — ปิดหน้านี้</button>
         </div>
 
         <!-- ── STEP: race condition ───────────────────── -->

@@ -1952,7 +1952,7 @@
         AQUA9:{p1:100,p2:120,p3:140,p4:160,label:'AQUA 9 (17kg)'},
         AQUA10:{p1:120,p2:140,p3:160,p4:180,label:'AQUA 10 (27kg)'},
     };
-    let _pricing = {};
+    let _pricing = {}, _dryerExtendMax = 50, _aquaExtendMax = 100;
 
     window.togglePricingSection = function() {
         const sec = document.getElementById('pricing-section');
@@ -1973,10 +1973,8 @@
             Object.keys(DEFAULT_PRICING).forEach(mid => {
                 if (!_pricing[mid]) _pricing[mid] = {...DEFAULT_PRICING[mid]};
             });
-            const extEl = document.getElementById('dryer-extend-max');
-            if (extEl) extEl.value = extSnap.exists() ? extSnap.val() : 50;
-            const aquaEl = document.getElementById('aqua-extend-max');
-            if (aquaEl) aquaEl.value = aquaExtSnap.exists() ? aquaExtSnap.val() : 100;
+            _dryerExtendMax = extSnap.exists() ? extSnap.val() : 50;
+            _aquaExtendMax  = aquaExtSnap.exists() ? aquaExtSnap.val() : 100;
         } catch(e) {
             _pricing = JSON.parse(JSON.stringify(DEFAULT_PRICING));
         }
@@ -2020,7 +2018,7 @@
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="text-xs" style="color:var(--text-muted)">฿</span>
-                    <input id="dryer-extend-max" type="number" min="10" step="10" value="50"
+                    <input id="dryer-extend-max" type="number" min="10" step="10" value="${_dryerExtendMax}"
                         class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
                         style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
                 </div>
@@ -2040,12 +2038,12 @@
         <div class="mt-3 pt-3 border-t" style="border-color:var(--border)">
             <div class="flex items-center justify-between gap-2">
                 <div>
-                    <div class="text-xs font-semibold" style="color:var(--text-main)">⏱️ วงเงินสูงสุด เพิ่มรอบซัก</div>
+                    <div class="text-xs font-semibold" style="color:var(--text-main)">⏱️ วงเงินสูงสุด เพิ่มเวลาอบ</div>
                     <div class="text-[10px]" style="color:var(--text-muted)">ผู้ใช้เลือกได้ ฿10 ถึงค่านี้</div>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="text-xs" style="color:var(--text-muted)">฿</span>
-                    <input id="aqua-extend-max" type="number" min="10" step="10" value="100"
+                    <input id="aqua-extend-max" type="number" min="10" step="10" value="${_aquaExtendMax}"
                         class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
                         style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
                 </div>

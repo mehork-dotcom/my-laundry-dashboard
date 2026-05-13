@@ -912,9 +912,8 @@
     // Admin Dashboard — โหลด History Stats
     // ============================================================
     async function loadAdminStats() {
-        const TZ = 7 * 60;
-        const localDate = new Date(Date.now() + (TZ - new Date().getTimezoneOffset()) * 60000);
-        const dateStr = localDate.toISOString().slice(0, 10);
+        // ใช้ Bangkok time (UTC+7) เสมอ ไม่ขึ้นกับ timezone ของ browser
+        const dateStr = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 
         try {
             const snap = await get(ref(database, `laundry_system/history/${dateStr}`));
@@ -1040,7 +1039,7 @@
             const dayNames = ['จ','อ','พ','พฤ','ศ','ส','อา'];
             document.getElementById('peak-day-chart').innerHTML = dayCounts.map((cnt, d) => {
                 const pct = Math.max(Math.round((cnt / maxD) * 64), 3);
-                const isToday = d === ((new Date().getDay() + 6) % 7);
+                const isToday = d === ((new Date(Date.now() + 7 * 3600000).getDay() + 6) % 7);
                 const color = isToday ? '#a855f7' : '#8b5cf6';
                 return `<div class="flex-1 flex flex-col items-center" style="min-width:0">
                     <div class="text-[8px] text-slate-400 mb-0.5">${cnt || ''}</div>

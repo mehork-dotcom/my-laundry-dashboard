@@ -668,6 +668,25 @@
 
     initLiff();
 
+    // ── Beam payment return: ปิด tab นี้แล้วให้ LIFF tab ทำงานต่อ ──
+    (function() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('beam_return') === '1') {
+            document.body.innerHTML = `
+                <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
+                            justify-content:center;gap:16px;background:#0f1117;color:#fff;font-family:sans-serif;padding:24px;text-align:center">
+                    <div style="font-size:48px">✅</div>
+                    <div style="font-size:18px;font-weight:800">ชำระเงินสำเร็จ!</div>
+                    <div style="font-size:14px;color:#94a3b8">กำลังกลับสู่แอป LINE...</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:8px">
+                        หากหน้านี้ไม่ปิดอัตโนมัติ<br>กรุณาปิดด้วยตนเองแล้วกลับไปที่แอป LINE
+                    </div>
+                </div>`;
+            setTimeout(() => { try { window.close(); } catch(e) {} }, 1500);
+            return;
+        }
+    })();
+
     // ข้อมูลความจุเครื่องตามที่ระบุ
     const machineCapacities = {
         'W1': '15KG', 'W2': '15KG', 'W3': '15KG', 'W4': '10KG',
@@ -2270,6 +2289,10 @@ function createMachineHTML(name, info) {
                     </div>
                     ${finishTimeStr ? `<div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">เสร็จ ${finishTimeStr}</div>` : ''}
                     ${(info && (info.finish_at && Date.parse(info.finish_at) > Date.now()) && !isAqua) ? `
+                    ${!isWasher ? `
+                    <button onclick="openPaymentModal('${name}','${displayName}',true)"
+                        class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                        style="background:var(--s-dry);color:white">⏱️ เพิ่มเวลาอบ</button>` : ''}
                     ${subscribedMachines.has(name) ? `
                     <button disabled
                         class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold

@@ -1336,6 +1336,7 @@
     // State
     let _mid = '', _prog = '', _step = 'intro', _txId = '', _claimId = '';
     let _payPricing = {}, _payMember = {}, _paySettings = {}, _addTime = false;
+    let _extendAmount = 10, _customPrice = null;  // เพิ่มเวลาอบ
     let _countdownTimer = null, _pollTimer = null, _txListener = null, _machineListener = null;
 
     // ── Machine type helpers ─────────────────────────────────────
@@ -1381,9 +1382,14 @@
 
         // เลือก step แรกตาม machine type
         if (isWasher(machineId) || isAqua(machineId)) {
-            _showStep('intro');     // popup กดเลือกที่เครื่องก่อน
+            _showStep('intro');
+        } else if (addTime) {
+            // Dryer เพิ่มเวลา → เลือกจำนวนเงินก่อน
+            _prog = 'single';
+            _customPrice = null;
+            _showStep('dryer-extend');
         } else {
-            // Dryer → ไปเลือก program โดยตรง
+            // Dryer ปกติ
             _prog = 'single';
             _showStep('program');
         }
@@ -1395,9 +1401,10 @@
         document.querySelectorAll('[data-paystep]').forEach(el => {
             el.classList.toggle('hidden', el.dataset.paystep !== step);
         });
-        if (step === 'intro')   _renderIntro();
-        if (step === 'program') _renderPrograms();
-        if (step === 'method')  _renderMethods();
+        if (step === 'intro')         _renderIntro();
+        if (step === 'program')       _renderPrograms();
+        if (step === 'method')        _renderMethods();
+        if (step === 'dryer-extend')  _renderDryerExtend();
     };
     // alias สั้น
     function _showStep(step) { window._showStep(step); }
@@ -1517,7 +1524,7 @@
 
     window._updateSummary = function() {
         if (!_prog) return;
-        const price    = parseFloat(_payPricing[_prog] || 0);
+        const price    = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
         const useCredit= document.getElementById('pay-use-credit').checked;
         const credit   = parseFloat(_payMember.credit_balance || 0);
         const credited = useCredit ? Math.min(credit, price) : 0;
@@ -1550,7 +1557,7 @@
 
     // ── STEP: METHOD SELECTION ───────────────────────────────────
     function _renderMethods() {
-        const price  = parseFloat(_payPricing[_prog] || 0);
+        const price  = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
         const credit = parseFloat(_payMember.credit_balance || 0);
         const points = parseInt(_payMember.points || 0);
         const uc     = document.getElementById('pay-use-credit').checked;
@@ -1610,7 +1617,7 @@
 
     // ── PAYMENT: Points Redemption ───────────────────────────────
     window.payWithPoints = async function() {
-        const price   = parseFloat(_payPricing[_prog] || 0);
+        const price   = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
         const points  = parseInt(_payMember.points || 0);
         const ptRate  = _paySettings.redeem_points || 100;
         const ptBaht  = _paySettings.redeem_baht   || 10;
@@ -1651,7 +1658,7 @@
         if (!liffUserId) {
             showToast('กรุณาเปิดใน LINE เพื่อสะสมแต้ม', '⚠️', 3000); return;
         }
-        const price = parseFloat(_payPricing[_prog] || 0);
+        const price = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
         try {
             const res = await fetch(`${PAYMENT_API}/payment/coin-slot`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
@@ -1731,6 +1738,30 @@
         clearInterval(_pollTimer);
         if (_txListener)     { _txListener();     _txListener = null; }
         if (_machineListener){ _machineListener(); _machineListener = null; }
+    }
+
+    // ── Dryer Extend helpers ─────────────────────────────────────
+    window._dryerExtendAdj = function(delta) {
+        const maxVal = parseInt(_paySettings.dryer_extend_max || 50);
+        _extendAmount = Math.min(maxVal, Math.max(10, _extendAmount + delta));
+        const disp = document.getElementById('extend-amount-display');
+        if (disp) disp.textContent = `฿${_extendAmount}`;
+    };
+
+    window._dryerExtendConfirm = function() {
+        _customPrice = _extendAmount;   // override ราคาปกติ
+        _prog = 'single';
+        _showStep('method');
+    };
+
+    function _renderDryerExtend() {
+        _extendAmount = 10;
+        _customPrice  = null;
+        const maxVal  = parseInt(_paySettings.dryer_extend_max || 50);
+        const disp    = document.getElementById('extend-amount-display');
+        const hint    = document.getElementById('extend-max-hint');
+        if (disp) disp.textContent = `฿${_extendAmount}`;
+        if (hint) hint.textContent = `ขั้นต่ำ ฿10 · สูงสุด ฿${maxVal}`;
     }
 
     // รอเครื่องเปลี่ยนสถานะ → ReadyToStart แล้วค่อยแสดง success
@@ -1841,7 +1872,7 @@
         clearInterval(_countdownTimer);
         document.getElementById('payment-modal').classList.add('hidden');
         document.body.style.overflow = '';
-        _mid=''; _prog=''; _txId=''; _claimId='';
+        _mid=''; _prog=''; _txId=''; _claimId=''; _customPrice=null; _extendAmount=10;
     };
 
     // ============================================================
@@ -1892,11 +1923,16 @@
 
     async function loadPricing() {
         try {
-            const snap = await get(ref(database, 'laundry_system/pricing'));
-            _pricing = snap.exists() ? snap.val() : {};
+            const [pSnap, extSnap] = await Promise.all([
+                get(ref(database, 'laundry_system/pricing')),
+                get(ref(database, 'laundry_system/settings/dryer_extend_max')),
+            ]);
+            _pricing = pSnap.exists() ? pSnap.val() : {};
             Object.keys(DEFAULT_PRICING).forEach(mid => {
                 if (!_pricing[mid]) _pricing[mid] = {...DEFAULT_PRICING[mid]};
             });
+            const extEl = document.getElementById('dryer-extend-max');
+            if (extEl) extEl.value = extSnap.exists() ? extSnap.val() : 50;
         } catch(e) {
             _pricing = JSON.parse(JSON.stringify(DEFAULT_PRICING));
         }
@@ -1931,7 +1967,22 @@
                 <span class="text-xs" style="color:var(--text-main)">${p.label}</span>
                 <div class="flex items-center gap-1"><span class="text-xs" style="color:var(--text-muted)">฿</span>
                 <input data-mid="${mid}" data-program="single" type="number" min="0" value="${p.single}" class="${iCls}" style="${iSty}"/></div></div>`;
-        }).join('') + `<button onclick="savePricing('dryer')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา Dryer</button>`;
+        }).join('') + `
+        <div class="mt-3 pt-3 border-t" style="border-color:var(--border)">
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <div class="text-xs font-semibold" style="color:var(--text-main)">⏱️ วงเงินสูงสุด เพิ่มเวลาอบ</div>
+                    <div class="text-[10px]" style="color:var(--text-muted)">ผู้ใช้เลือกได้ ฿10 ถึงค่านี้</div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-xs" style="color:var(--text-muted)">฿</span>
+                    <input id="dryer-extend-max" type="number" min="10" step="10" value="50"
+                        class="w-16 text-sm px-2 py-1 rounded-lg border text-center"
+                        style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                </div>
+            </div>
+        </div>
+        <button onclick="savePricing('dryer')" class="w-full mt-3 py-2 rounded-xl text-xs font-bold" style="background:var(--brand);color:white">💾 บันทึกราคา Dryer</button>`;
 
         aEl.innerHTML = ['AQUA9','AQUA10'].map(mid => {
             const p = _pricing[mid] || DEFAULT_PRICING[mid];
@@ -1947,6 +1998,14 @@
     window.savePricing = async function(group) {
         const groupMap = {washer:['W1','W2','W3','W4'],dryer:['D5','D6','D7','D8'],aqua:['AQUA9','AQUA10']};
         const updates = {};
+        // บันทึก dryer_extend_max ถ้า group = dryer
+        if (group === 'dryer') {
+            const extEl = document.getElementById('dryer-extend-max');
+            if (extEl) {
+                const maxVal = Math.max(10, parseInt(extEl.value)||50);
+                await set(ref(database,'laundry_system/settings/dryer_extend_max'), maxVal);
+            }
+        }
         (groupMap[group]||[]).forEach(mid => {
             const data = {label: (_pricing[mid]||DEFAULT_PRICING[mid]).label};
             document.querySelectorAll(`input[data-mid="${mid}"]`).forEach(inp => {
@@ -2823,6 +2882,30 @@ function createMachineHTML(name, info) {
         </div>
 
         <!-- ── STEP: success ──────────────────────────── -->
+        <!-- ── STEP: dryer-extend (เลือกจำนวนเงินเพิ่มเวลาอบ) ── -->
+        <div data-paystep="dryer-extend" class="hidden px-5 pb-6 pt-4">
+            <div class="text-sm font-bold mb-4 text-center" style="color:var(--text-main)">⏱️ เลือกจำนวนเงินที่ต้องการเพิ่ม</div>
+            <!-- Amount selector -->
+            <div class="flex items-center justify-center gap-4 mb-2">
+                <button onclick="_dryerExtendAdj(-10)"
+                    class="w-12 h-12 rounded-2xl text-2xl font-black flex items-center justify-center active:scale-90 transition-all"
+                    style="background:var(--bg-page);color:var(--text-main);border:2px solid var(--border)">−</button>
+                <div class="text-center">
+                    <div id="extend-amount-display" class="text-4xl font-black" style="color:var(--brand)">฿10</div>
+                    <div class="text-xs mt-1" style="color:var(--text-muted)">จำนวนเงิน</div>
+                </div>
+                <button onclick="_dryerExtendAdj(+10)"
+                    class="w-12 h-12 rounded-2xl text-2xl font-black flex items-center justify-center active:scale-90 transition-all"
+                    style="background:var(--bg-page);color:var(--text-main);border:2px solid var(--border)">+</button>
+            </div>
+            <div id="extend-max-hint" class="text-[11px] text-center mb-5" style="color:var(--text-muted)">ขั้นต่ำ ฿10 · สูงสุด ฿50</div>
+            <button onclick="_dryerExtendConfirm()"
+                class="w-full py-3 rounded-2xl font-bold text-sm active:scale-95 transition-all"
+                style="background:var(--brand);color:white">ดำเนินการต่อ →</button>
+            <button onclick="_showStep('method')" class="w-full py-2 mt-2 rounded-2xl text-xs font-bold"
+                style="color:var(--text-muted)">← ยกเลิก</button>
+        </div>
+
         <!-- ── STEP: starting (รอเครื่อง ReadyToStart) ──── -->
         <div data-paystep="starting" class="hidden px-5 pb-6 text-center py-6">
             <div class="flex justify-center mb-4">

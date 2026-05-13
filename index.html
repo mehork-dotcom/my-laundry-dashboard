@@ -1429,7 +1429,7 @@
         const mid = _mid;
         const programs = isWasher(mid)
             ? [['cold','❄️ Cold','น้ำเย็น ซักทั่วไป'],['warm','🌤 Warm','น้ำอุ่น เสื้อผ้าทั่วไป'],['hot','🔥 Hot','น้ำร้อน ฆ่าเชื้อโรค']]
-            : [['p1','🟢 P1','น้ำหนักน้อย'],['p2','🟡 P2','น้ำหนักกลาง'],['p3','🟠 P3','น้ำหนักมาก'],['p4','🔴 P4','น้ำหนักสูงสุด']];
+            : [['p1','🟢 P1-ซักอบ พิเศษ','ซัก+อบในรอบเดียว'],['p2','🟡 P2-ซักอบ มาตรฐาน','ซัก+อบ มาตรฐาน'],['p3','🟠 P3-ซักน้ำอุ่น','ซักด้วยน้ำอุ่น'],['p4','🔴 P4-ซักน้ำเย็น','ซักด้วยน้ำเย็น']];
 
         const name = isWasher(mid) ? 'โปรแกรมซัก' : 'โปรแกรม';
         document.getElementById('pay-intro-list').innerHTML = programs.map(([k,l,d]) =>
@@ -1575,7 +1575,7 @@
         const price  = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
         // ตรวจ beam_payment_disabled จาก Firebase
         get(ref(database,'laundry_system/settings/beam_payment_disabled')).then(s => {
-            const beamBtn = document.getElementById('pay-btn-beam');
+            const beamBtn = document.getElementById('pay-beam-btn');
             if (beamBtn) beamBtn.classList.toggle('hidden', s.exists() && s.val() === true);
         }).catch(()=>{});
         const credit = parseFloat(_payMember.credit_balance || 0);
@@ -1754,6 +1754,15 @@
             } catch(e) {}
         }, 5000);
     }
+
+    window._cancelBeamPayment = function() {
+        _stopPoll();
+        clearInterval(_countdownTimer);
+        if (_txId) {
+            try { update(ref(database, `laundry_system/transactions/${_txId}`), {status:'cancelled'}); } catch(e) {}
+        }
+        _showStep('timeout');
+    };
 
     function _stopPoll() {
         clearInterval(_pollTimer);
@@ -2924,6 +2933,10 @@ function createMachineHTML(name, info) {
                 <span class="text-xs" style="color:var(--text-muted)">หมดอายุใน</span>
             </div>
             <div class="text-xs" style="color:var(--text-muted)">หน้านี้จะอัปเดตอัตโนมัติเมื่อชำระเสร็จ</div>
+            <button onclick="_cancelBeamPayment()" class="mt-3 w-full py-2 rounded-xl text-xs font-bold border"
+                style="border-color:var(--border);color:var(--text-muted)">
+                ❌ ยกเลิกการชำระเงิน
+            </button>
         </div>
 
         <!-- ── STEP: coin ─────────────────────────────── -->

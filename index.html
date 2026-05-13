@@ -1518,7 +1518,7 @@
         document.getElementById('pay-summary-credit-val').textContent = `-฿${credited}`;
         const ptsEl = document.getElementById('pay-summary-pts');
         if (pts > 0 && liffUserId) {
-            ptsEl.textContent = `🎁 จะได้รับ +${pts} แต้ม${mult>1?` (x${mult}!)':''}${is_new?' +50 Welcome':''}`;
+            ptsEl.textContent = `🎁 จะได้รับ +${pts} แต้ม` + (mult>1 ? ` (x${mult}!)` : '') + (is_new ? ' +50 Welcome' : '');
         } else if (!liffUserId) {
             ptsEl.textContent = '💡 เปิดใน LINE เพื่อสะสมแต้ม';
         } else { ptsEl.textContent = ''; }

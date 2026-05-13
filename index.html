@@ -406,38 +406,71 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="text-xs font-semibold mb-2 block" style="color:var(--text-sub)">โปรแกรมที่ได้แต้ม x2</label>
-                                <div class="grid grid-cols-3 gap-1.5" id="dbl-pts-grid">
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-warm" value="warm" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                <label class="text-xs font-semibold mb-2 block" style="color:var(--text-sub)">ตัวคูณแต้มแต่ละโปรแกรม</label>
+                                <div class="grid grid-cols-2 gap-x-3 gap-y-2" id="pts-mult-grid">
+                                    <!-- Washer -->
+                                    <div class="text-[10px] font-bold col-span-2" style="color:var(--text-muted)">🌀 Washer</div>
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-xs" style="color:var(--text-main)">COLD</span>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-cold" min="1" max="10" value="1" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">WARM</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-hot" value="hot" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-warm" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">HOT</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-single" value="single" class="w-3.5 h-3.5 accent-pink-500"/>
-                                        <span class="text-xs" style="color:var(--text-main)">SINGLE</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-p1" value="p1" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-hot" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <!-- Dryer -->
+                                    <div class="text-[10px] font-bold col-span-2 mt-1" style="color:var(--text-muted)">🔥 Dryer</div>
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-xs" style="color:var(--text-main)">DRYER</span>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-dryer" min="1" max="10" value="1" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <!-- AQUA -->
+                                    <div class="text-[10px] font-bold col-span-2 mt-1" style="color:var(--text-muted)">✨ AQUA</div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">P1</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-p2" value="p2" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-p1" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">P2</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-p3" value="p3" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-p2" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">P3</span>
-                                    </label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer">
-                                        <input type="checkbox" id="dbl-p4" value="p4" class="w-3.5 h-3.5 accent-pink-500" checked/>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-p3" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-1">
                                         <span class="text-xs" style="color:var(--text-main)">P4</span>
-                                    </label>
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" id="mult-p4" min="1" max="10" value="2" class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="border-color:var(--border);background:var(--bg-page);color:var(--text-main)"/>
+                                            <span class="text-[10px]" style="color:var(--text-muted)">x</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="text-[10px] mt-1" style="color:var(--text-muted)">Cold = x1 เสมอ (ไม่สามารถเลือกได้)</div>
                             </div>
                             <button onclick="saveMemberSettings()"
                                 class="w-full mt-2 py-2 rounded-xl text-xs font-bold"
@@ -446,6 +479,50 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- ข้อ 1: Beam Environment -->
+                    <div class="rounded-2xl p-4 shadow-sm border" style="background:var(--bg-card);border-color:var(--border)">
+                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">⚡ Beam Payment</div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs font-semibold mb-2 block" style="color:var(--text-sub)">Environment</label>
+                                <div class="flex gap-2">
+                                    <button id="beam-btn-playground" onclick="setBeamEnv('playground')"
+                                        class="flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all"
+                                        style="border-color:var(--border)">
+                                        🧪 Playground
+                                    </button>
+                                    <button id="beam-btn-production" onclick="setBeamEnv('production')"
+                                        class="flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all"
+                                        style="border-color:var(--border)">
+                                        🚀 Production
+                                    </button>
+                                </div>
+                                <div id="beam-env-status" class="text-[10px] mt-2 text-center" style="color:var(--text-muted)">กำลังโหลด...</div>
+                            </div>
+                            <div class="text-[10px] p-2 rounded-lg" style="background:var(--bg-page);color:var(--text-muted)">
+                                ⚠️ ต้องตั้ง env vars ใน Railway ทั้งสองชุด:<br/>
+                                BEAM_PLAYGROUND_* และ BEAM_PRODUCTION_*
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ข้อ 3: LINE Notify Recipients -->
+                    <div class="rounded-2xl p-4 shadow-sm border" style="background:var(--bg-card);border-color:var(--border)">
+                        <div class="text-sm font-bold mb-3" style="color:var(--text-main)">📱 LINE แจ้งเตือน Admin</div>
+                        <div class="space-y-2">
+                            <div class="text-xs mb-2" style="color:var(--text-sub)">เลือกว่าจะแจ้งเตือนใครเมื่อเกิด event ในระบบ</div>
+                            <div id="line-notify-list" class="space-y-2">
+                                <div class="text-xs" style="color:var(--text-muted)">กำลังโหลด...</div>
+                            </div>
+                            <button onclick="saveLineNotifySettings()"
+                                class="w-full mt-2 py-2 rounded-xl text-xs font-bold"
+                                style="background:var(--brand);color:white">
+                                💾 บันทึกการตั้งค่าแจ้งเตือน
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -635,7 +712,7 @@
         // แสดง/ซ่อน logout button
         const logoutBtn = document.getElementById('admin-logout-btn');
         if (logoutBtn) logoutBtn.classList.toggle('hidden', !isAdmin);
-        if (isAdmin) { loadAdminStats(); loadAdminUsers(); loadPricing(); loadMemberSettings(); }
+        if (isAdmin) { loadAdminStats(); loadAdminUsers(); loadPricing(); loadMemberSettings(); loadBeamSettings(); loadLineNotifySettings(); }
         render();
     }
 
@@ -827,16 +904,31 @@
             const paidCycles  = todayData.filter(r => !isCleaning(r));
             const cleanCycles = todayData.filter(r =>  isCleaning(r));
 
-            const total   = paidCycles.length;   // เฉพาะรอบที่คิดเงิน
-            const revenue = paidCycles.reduce((s, r) => s + (Number(r.price) || 0), 0);
+            const total   = paidCycles.length;
+            // รองรับทั้ง r.price, r.amount, r.paid_amount
+            const revenue = paidCycles.reduce((s, r) => {
+                const v = Number(r.price || r.amount || r.paid_amount || 0);
+                return s + v;
+            }, 0);
 
             document.getElementById('admin-total-today').innerText  = total
                 + (cleanCycles.length ? ` (+${cleanCycles.length}🧴)` : '');
             document.getElementById('admin-revenue-today').innerText = '฿' + revenue.toLocaleString();
 
-            // Peak Hour (เฉพาะรอบที่คิดเงิน)
+            // Peak Hour — คำนวณจาก r.hour หรือ timestamp
             const hourCounts = Array(24).fill(0);
-            paidCycles.forEach(r => { if (r.hour !== undefined) hourCounts[r.hour]++; });
+            paidCycles.forEach(r => {
+                if (r.hour !== undefined) {
+                    hourCounts[r.hour]++;
+                } else {
+                    // fallback: ดึง hour จาก created_at / started_at / timestamp
+                    const ts = r.created_at || r.started_at || r.timestamp || r.time;
+                    if (ts) {
+                        const h = new Date(ts).getHours();
+                        if (h >= 0 && h < 24) hourCounts[h]++;
+                    }
+                }
+            });
             const maxHour = Math.max(...hourCounts);
             const peakHour = maxHour > 0 ? hourCounts.indexOf(maxHour) : -1;
             document.getElementById('admin-peak-hour').innerText = peakHour >= 0 ? `${peakHour}:00` : '-';
@@ -900,7 +992,17 @@
                 Object.values(snapAll.val()).forEach(dayData => {
                     if (typeof dayData !== 'object') return;
                     Object.values(dayData).forEach(r => {
-                        if (r && r.day_of_week !== undefined) dayCounts[r.day_of_week]++;
+                        if (!r) return;
+                        if (r.day_of_week !== undefined) {
+                            dayCounts[r.day_of_week]++;
+                        } else {
+                            // fallback จาก timestamp
+                            const ts = r.created_at || r.started_at || r.timestamp;
+                            if (ts) {
+                                const d = (new Date(ts).getDay() + 6) % 7; // จ=0
+                                if (d >= 0 && d < 7) dayCounts[d]++;
+                            }
+                        }
                     });
                 });
             }
@@ -1336,17 +1438,19 @@
             : ['single'];
 
         const pts_rate = _paySettings.points_rate || 10;
-        // double_point_programs มาจาก Firebase settings (default: hot, p1-p4)
-        const dblProgs = _paySettings.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
+        // points_multipliers มาจาก Firebase settings
+        const mults    = _paySettings.points_multipliers || {cold:1,warm:2,hot:2,dryer:1,p1:2,p2:2,p3:2,p4:2};
         const credit   = parseFloat(_payMember.credit_balance || 0);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
 
         document.getElementById('pay-prog-list').innerHTML = progs.map(p => {
             const info   = PROGRAM_INFO[p] || { label: p, desc: '' };
             const price  = parseFloat(_payPricing[p] || 0);
-            const is_dbl = dblProgs.includes(p) || isAqua(_mid);
-            const pts    = Math.floor(price / pts_rate) * (is_dbl ? 2 : 1);
-            const dblBadge = is_dbl ? `<span class="text-[9px] px-1 py-0.5 rounded font-bold" style="background:color-mix(in srgb,var(--brand) 20%,transparent);color:var(--brand)">x2</span>` : '';
+            // dryer ใช้ key "dryer" แทน "single"
+            const multKey = p === 'single' ? 'dryer' : p;
+            const mult    = mults[multKey] ?? (isAqua(_mid) ? 2 : 1);
+            const pts    = Math.floor(price / pts_rate) * mult;
+            const dblBadge = mult > 1 ? `<span class="text-[9px] px-1 py-0.5 rounded font-bold" style="background:color-mix(in srgb,var(--brand) 20%,transparent);color:var(--brand)">x${mult}</span>` : '';
             return `
             <button onclick="selectProg('${p}')" data-prog="${p}"
                 class="w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all active:scale-95"
@@ -1400,10 +1504,11 @@
         const credited = useCredit ? Math.min(credit, price) : 0;
         const final    = Math.max(0, price - credited);
         const pts_rate = _paySettings.points_rate || 10;
-        const dblProgs = _paySettings.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
-        const is_dbl   = dblProgs.includes(_prog) || isAqua(_mid);
+        const mults    = _paySettings.points_multipliers || {cold:1,warm:2,hot:2,dryer:1,p1:2,p2:2,p3:2,p4:2};
+        const multKey  = _prog === 'single' ? 'dryer' : _prog;
+        const mult     = mults[multKey] ?? (isAqua(_mid) ? 2 : 1);
         const is_new   = (_payMember.total_uses || 0) === 0 && liffUserId;
-        let pts = Math.floor(final / pts_rate) * (is_dbl ? 2 : 1);
+        let pts = Math.floor(final / pts_rate) * mult;
         if (is_new) pts += 50;
 
         document.getElementById('pay-summary-orig').textContent  = `฿${price}`;
@@ -1413,7 +1518,7 @@
         document.getElementById('pay-summary-credit-val').textContent = `-฿${credited}`;
         const ptsEl = document.getElementById('pay-summary-pts');
         if (pts > 0 && liffUserId) {
-            ptsEl.textContent = `🎁 จะได้รับ +${pts} แต้ม${is_dbl?' (x2!)':''}${is_new?' +50 Welcome':''}`;
+            ptsEl.textContent = `🎁 จะได้รับ +${pts} แต้ม${mult>1?` (x${mult}!)':''}${is_new?' +50 Welcome':''}`;
         } else if (!liffUserId) {
             ptsEl.textContent = '💡 เปิดใน LINE เพื่อสะสมแต้ม';
         } else { ptsEl.textContent = ''; }
@@ -1772,12 +1877,17 @@
     // ══════════════════════════════════════════════════════════
     // M1: MEMBER SETTINGS
     // ══════════════════════════════════════════════════════════
-    function _getDoublePrograms() {
-        return ['warm','hot','single','p1','p2','p3','p4']
-            .filter(p => {
-                const el = document.getElementById(`dbl-${p}`);
-                return el && el.checked;
-            });
+    // ── helpers: points multipliers ─────────────────────────────
+    const MULT_PROGRAMS = ['cold','warm','hot','dryer','p1','p2','p3','p4'];
+    const DEFAULT_MULTS = {cold:1,warm:2,hot:2,dryer:1,p1:2,p2:2,p3:2,p4:2};
+
+    function _getPointsMultipliers() {
+        const result = {};
+        MULT_PROGRAMS.forEach(p => {
+            const el = document.getElementById(`mult-${p}`);
+            result[p] = el ? Math.max(1, parseInt(el.value)||1) : DEFAULT_MULTS[p];
+        });
+        return result;
     }
 
     async function loadMemberSettings() {
@@ -1790,29 +1900,106 @@
             document.getElementById('setting-loyalty-program').value  = s.loyalty_program  ?? 'dryer-single';
             document.getElementById('setting-redeem-points').value    = s.redeem_points    ?? 100;
             document.getElementById('setting-redeem-baht').value      = s.redeem_baht      ?? 50;
-            // โหลด double_point_programs checkboxes
-            const dbl = s.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
-            ['warm','hot','single','p1','p2','p3','p4'].forEach(p => {
-                const el = document.getElementById(`dbl-${p}`);
-                if (el) el.checked = dbl.includes(p);
+            // โหลด points_multipliers (หรือ fallback จาก double_point_programs เดิม)
+            const mults = s.points_multipliers || (() => {
+                const dbl = s.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
+                const m = {...DEFAULT_MULTS};
+                // dryer เดิมชื่อ single
+                if (dbl.includes('single')) m.dryer = 2;
+                ['warm','hot','p1','p2','p3','p4'].forEach(p => { m[p] = dbl.includes(p) ? 2 : 1; });
+                return m;
+            })();
+            MULT_PROGRAMS.forEach(p => {
+                const el = document.getElementById(`mult-${p}`);
+                if (el) el.value = mults[p] ?? DEFAULT_MULTS[p];
             });
         } catch(e) { console.error('loadMemberSettings:', e); }
     }
 
     window.saveMemberSettings = async function() {
         const settings = {
-            points_rate:           Number(document.getElementById('setting-points-rate').value)||10,
-            newuser_discount:      Number(document.getElementById('setting-newuser-discount').value)||0,
-            loyalty_every:         Number(document.getElementById('setting-loyalty-every').value)||10,
-            loyalty_program:       document.getElementById('setting-loyalty-program').value,
-            redeem_points:         Number(document.getElementById('setting-redeem-points').value)||100,
-            redeem_baht:           Number(document.getElementById('setting-redeem-baht').value)||50,
-            // โปรแกรมที่ได้แต้ม x2 (default: hot, p1-p4 เท่านั้น — ไม่มี warm)
-            double_point_programs: _getDoublePrograms(),
+            points_rate:       Number(document.getElementById('setting-points-rate').value)||10,
+            newuser_discount:  Number(document.getElementById('setting-newuser-discount').value)||0,
+            loyalty_every:     Number(document.getElementById('setting-loyalty-every').value)||10,
+            loyalty_program:   document.getElementById('setting-loyalty-program').value,
+            redeem_points:     Number(document.getElementById('setting-redeem-points').value)||100,
+            redeem_baht:       Number(document.getElementById('setting-redeem-baht').value)||50,
+            points_multipliers: _getPointsMultipliers(),
         };
         try {
             await set(ref(database,'laundry_system/settings/members'), settings);
             showToast('✅ บันทึกการตั้งค่าสมาชิกแล้ว','🎁',3000);
+        } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
+    };
+
+    // ── Beam Environment (ข้อ 1) ─────────────────────────────────
+    async function loadBeamSettings() {
+        try {
+            const snap = await get(ref(database,'laundry_system/settings/beam_env'));
+            const env = snap.exists() ? snap.val() : 'playground';
+            _updateBeamEnvUI(env);
+        } catch(e) { console.error('loadBeamSettings:', e); }
+    }
+
+    function _updateBeamEnvUI(env) {
+        const isProd = env === 'production';
+        const pb = document.getElementById('beam-btn-playground');
+        const rb = document.getElementById('beam-btn-production');
+        const st = document.getElementById('beam-env-status');
+        if (!pb) return;
+        pb.style.background = !isProd ? 'var(--brand)' : 'transparent';
+        pb.style.color      = !isProd ? 'white' : 'var(--text-sub)';
+        rb.style.background =  isProd ? '#10b981' : 'transparent';
+        rb.style.color      =  isProd ? 'white' : 'var(--text-sub)';
+        st.textContent = isProd ? '🚀 Production — ใช้เงินจริง' : '🧪 Playground — ทดสอบ';
+        st.style.color = isProd ? '#10b981' : '#f59e0b';
+    }
+
+    window.setBeamEnv = async function(env) {
+        try {
+            await set(ref(database,'laundry_system/settings/beam_env'), env);
+            _updateBeamEnvUI(env);
+            showToast(`✅ เปลี่ยนเป็น ${env} แล้ว`,'⚡',2000);
+        } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
+    };
+
+    // ── LINE Notify Recipients (ข้อ 3) ───────────────────────────
+    async function loadLineNotifySettings() {
+        const listEl = document.getElementById('line-notify-list');
+        if (!listEl) return;
+        try {
+            const [usersSnap, notifySnap] = await Promise.all([
+                get(ref(database,'laundry_system/admin_users')),
+                get(ref(database,'laundry_system/settings/line_notify_uids')),
+            ]);
+            const users  = usersSnap.exists()  ? usersSnap.val()  : {};
+            const notify = notifySnap.exists() ? notifySnap.val() : {};
+            const admins = Object.entries(users).filter(([,v]) => v === true || (typeof v==='object' && v?.active!==false));
+            if (admins.length === 0) {
+                listEl.innerHTML = '<div class="text-xs" style="color:var(--text-muted)">ยังไม่มี Admin</div>';
+                return;
+            }
+            listEl.innerHTML = admins.map(([uid, val]) => {
+                const name    = typeof val === 'object' ? (val.name || uid.slice(0,8)) : uid.slice(0,8);
+                const checked = notify[uid] !== false;  // default = true
+                return `<label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="ln-${uid}" value="${uid}" ${checked?'checked':''} class="w-3.5 h-3.5 accent-green-500"/>
+                    <span class="text-xs" style="color:var(--text-main)">${name}</span>
+                    <span class="text-[10px]" style="color:var(--text-muted)">${uid.slice(0,12)}...</span>
+                </label>`;
+            }).join('');
+        } catch(e) { console.error('loadLineNotifySettings:', e); }
+    }
+
+    window.saveLineNotifySettings = async function() {
+        const listEl = document.getElementById('line-notify-list');
+        if (!listEl) return;
+        const checkboxes = listEl.querySelectorAll('input[type=checkbox]');
+        const result = {};
+        checkboxes.forEach(cb => { result[cb.value] = cb.checked; });
+        try {
+            await set(ref(database,'laundry_system/settings/line_notify_uids'), result);
+            showToast('✅ บันทึกการตั้งค่าแจ้งเตือนแล้ว','📱',2000);
         } catch(e) { showToast(`❌ ${e.message}`,'⚠️',4000); }
     };
 

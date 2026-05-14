@@ -341,8 +341,10 @@ html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun'
         <div style="font-size:13px;font-weight:800;color:var(--text-main)">🎟️ สะสมครั้ง — รับฟรี</div>
         <div id="stamp-counter" style="font-size:12px;font-weight:700;color:var(--brand)">0/10</div>
       </div>
-      <div id="stamp-grid" class="stamp-grid"></div>
-      <div id="stamp-reward-hint" style="font-size:11px;color:var(--text-muted);margin-top:10px;text-align:center"></div>
+      <!-- 3 กอง: Washer / Dryer / AQUA -->
+      <div class="space-y-3" id="loyalty-cards-wrap">
+        <!-- dynamic -->
+      </div>
     </div>
   </div>
 
@@ -363,6 +365,9 @@ html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun'
       <div id="htab-pay" onclick="switchHistTab('pay')"
         style="flex:1;text-align:center;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg-page);color:var(--text-muted)">
         💰 การชำระเงิน</div>
+      <div id="htab-voucher" onclick="switchHistTab('voucher')"
+        style="flex:1;text-align:center;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg-page);color:var(--text-muted)">
+        🎟️ สิทธิ์ฟรี</div>
     </div>
     <div class="card" style="padding:0 16px">
       <div id="hist-list"><div class="loading" style="padding:24px 0"><div class="spinner"></div></div></div>
@@ -520,8 +525,9 @@ function switchTab(name) {
 
 function switchHistTab(name) {
   curHistTab = name;
-  ['wash','pay'].forEach(n => {
+  ['wash','pay','voucher'].forEach(n => {
     const el = document.getElementById(`htab-${n}`);
+    if (!el) return;
     el.style.background = n === name ? 'var(--brand)' : 'var(--bg-page)';
     el.style.color      = n === name ? 'white'         : 'var(--text-muted)';
   });
@@ -690,26 +696,58 @@ function renderProfile(uid) {
 }
 
 // ── Loyalty Stamps ────────────────────────────────────────
-function renderStamps() {
-  const stamps    = parseInt(memberData.loyalty_stamps || 0);
-  const every     = parseInt(settings.loyalty_every || 10);
-  const progName  = settings.loyalty_program || 'dryer-single';
-  const current   = stamps % every;
-  const grid      = document.getElementById('stamp-grid');
+const LOYALTY_TYPE_DEFS = [
+  { key:'washer', label:'🌀 Washer (เครื่องซัก)', icon:'🌀' },
+  { key:'dryer',  label:'🔥 Dryer (เครื่องอบ)',   icon:'🔥' },
+  { key:'aqua',   label:'✨ AQUA',                 icon:'✨' },
+];
 
-  grid.style.gridTemplateColumns = `repeat(${Math.min(every, 5)}, 1fr)`;
-  grid.innerHTML = Array.from({ length: every }, (_, i) => {
-    const filled = i < current;
-    const isLast = i === every - 1;
-    return `<div class="stamp ${filled ? 'filled' : ''} ${isLast ? 'reward' : ''}">
-      ${isLast ? '🎁' : filled ? '✓' : (i + 1)}
+function renderStamps() {
+  const wrap = document.getElementById('loyalty-cards-wrap');
+  if (!wrap) return;
+
+  const rewardTypeTh = (cfg) => {
+    if (!cfg) return '';
+    if (cfg.type === 'credit') return `Credit ฿${cfg.value}`;
+    const pnames = {cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน',single:'อบผ้า',
+      p1:'P1',p2:'P2',p3:'P3',p4:'P4'};
+    return `ฟรีโปรแกรม ${pnames[cfg.program]||cfg.program}`;
+  };
+
+  let totalStamps = 0;
+  wrap.innerHTML = LOYALTY_TYPE_DEFS.map(t => {
+    const cfg     = settings[`loyalty_${t.key}`] || {};
+    const every   = parseInt(cfg.every || settings.loyalty_every || 10);
+    const stamps  = parseInt(memberData[`loyalty_${t.key}`] || 0);
+    const current = stamps % every;
+    totalStamps  += stamps;
+    const reward  = rewardTypeTh(cfg) || '-';
+    const pct     = Math.round(current / every * 100);
+
+    const stampsHtml = Array.from({ length: Math.min(every, 10) }, (_, i) => {
+      const filled  = i < current;
+      const isLast  = i === Math.min(every, 10) - 1;
+      return `<div class="stamp ${filled?'filled':''} ${isLast?'reward':''}" style="width:28px;height:28px;font-size:11px">
+        ${isLast ? '🎁' : filled ? '✓' : (i+1)}
+      </div>`;
+    }).join('') + (every > 10 ? `<div style="font-size:10px;color:var(--text-muted);display:flex;align-items:center">+${every-10}</div>` : '');
+
+    return `<div style="background:var(--bg-page);border-radius:14px;padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-main)">${t.label}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--brand)">${current}/${every}</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${stampsHtml}</div>
+      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;background:var(--brand);border-radius:2px;width:${pct}%;transition:width .5s"></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted)">รางวัล: ${reward} · สะสมแล้วทั้งหมด ${stamps} ครั้ง</div>
     </div>`;
   }).join('');
 
-  document.getElementById('stamp-counter').textContent = `${current}/${every}`;
-  const rewardLabel = progName.includes('dryer') ? 'ซักฟรี 1 รอบ' : 'ส่วนลดพิเศษ';
-  document.getElementById('stamp-reward-hint').textContent =
-    `สะสมครบ ${every} ครั้ง รับ ${rewardLabel} ฟรี! (สะสมแล้ว ${stamps} รอบทั้งหมด)`;
+  // อัปเดต header stamp counter (รวมทุกประเภท)
+  const stampCountEl = document.getElementById('stamp-counter');
+  if (stampCountEl) stampCountEl.textContent = `${totalStamps} ครั้ง (รวม)`;
 }
 
 // ── History ───────────────────────────────────────────────
@@ -723,6 +761,42 @@ function renderHistory() {
     if (isWash) return ['started','free','credited'].includes(tx.status);
     return parseFloat(tx.paid_amount || 0) > 0 || tx.status === 'started';
   }).slice(0, 30);
+
+  // Voucher tab
+  if (curHistTab === 'voucher') {
+    const uid = viewUid || liffUserId;
+    const { ref: fbRef, get: fbGet } = window._fb;
+    fbGet(fbRef(db, `laundry_system/members/${uid}/loyalty_vouchers`)).then(snap => {
+      if (!snap.exists()) {
+        container.innerHTML = `<div style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">ยังไม่มีสิทธิ์ฟรี</div>`;
+        return;
+      }
+      const progNames = {cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน',single:'อบผ้า',
+        p1:'P1-ซักอบ พิเศษ',p2:'P2-ซักอบ มาตรฐาน',p3:'P3-ซักน้ำอุ่น',p4:'P4-ซักน้ำเย็น'};
+      const typeIcons = {washer:'🌀',dryer:'🔥',aqua:'✨'};
+      const entries = Object.entries(snap.val()).sort((a,b) =>
+        (b[1].earned_at||'').localeCompare(a[1].earned_at||''));
+      container.innerHTML = entries.map(([id, v]) => {
+        const exp    = v.expires_at ? new Date(v.expires_at).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '-';
+        const status = v.used ? '<span class="hist-badge badge-fail">ใช้แล้ว</span>'
+          : new Date(v.expires_at) < new Date() ? '<span class="hist-badge badge-fail">หมดอายุ</span>'
+          : '<span class="hist-badge badge-success">ใช้ได้</span>';
+        return `<div class="hist-item">
+          <div class="hist-icon" style="background:color-mix(in srgb,var(--sage) 20%,transparent)">${typeIcons[v.type]||'🎟️'}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text-main)">
+              ${typeIcons[v.type]||''} ${v.type} — ${progNames[v.program]||v.program}
+            </div>
+            <div style="font-size:11px;color:var(--text-sub)">หมดอายุ ${exp}</div>
+            <div style="margin-top:3px">${status}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }).catch(() => {
+      container.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-muted)">โหลดไม่ได้</div>`;
+    });
+    return;
+  }
 
   if (!items.length) {
     container.innerHTML = `<div style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">

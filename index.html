@@ -1710,6 +1710,27 @@
     };
 
     // ── PAYMENT: Coin Slot ───────────────────────────────────────
+    window.payWithVoucher = async function() {
+        const _vBtn = document.querySelectorAll('[onclick="payWithVoucher()"]')[0];
+        if (_vBtn) { _vBtn.disabled = true; _vBtn.textContent = '⏳ กำลังดำเนินการ...'; }
+        try {
+            const res = await fetch(`${PAYMENT_API}/payment/create`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({machine_id: _mid, program: _prog,
+                                      user_id: liffUserId || 'kiosk',
+                                      use_voucher: true})
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error');
+            _txId = data.tx_id;
+            _showStep('starting');
+            _startMachineWatch(_mid, 0);
+        } catch(e) {
+            showToast(`❌ ${e.message}`, '⚠️', 4000);
+            if (_vBtn) { _vBtn.disabled = false; _vBtn.textContent = '🎟️ ใช้สิทธิ์ฟรี'; }
+        }
+    };
+
     window.payWithCoin = async function() {
         if (!liffUserId) {
             showToast('กรุณาเปิดใน LINE เพื่อสะสมแต้ม', '⚠️', 3000); return;
@@ -2121,6 +2142,77 @@
     // M1: MEMBER SETTINGS
     // ══════════════════════════════════════════════════════════
     // ── helpers: points multipliers ─────────────────────────────
+    // ── Loyalty per machine type ──────────────────────────
+    const LOYALTY_TYPES = [
+      { key:'washer', label:'🌀 Washer', programs:['cold','warm','hot'],
+        progNames:{cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน'} },
+      { key:'dryer',  label:'🔥 Dryer',  programs:['single'],
+        progNames:{single:'อบผ้า'} },
+      { key:'aqua',   label:'✨ AQUA',   programs:['p1','p2','p3','p4'],
+        progNames:{p1:'P1-ซักอบ พิเศษ',p2:'P2-ซักอบ มาตรฐาน',p3:'P3-ซักน้ำอุ่น',p4:'P4-ซักน้ำเย็น'} },
+    ];
+
+    function _renderLoyaltyCfg(settings) {
+        const container = document.getElementById('loyalty-cfg');
+        if (!container) return;
+        container.innerHTML = LOYALTY_TYPES.map(t => {
+            const cfg   = settings[`loyalty_${t.key}`] || {};
+            const every = cfg.every ?? 10;
+            const type  = cfg.type  || 'credit';
+            const value = cfg.value || 0;
+            const prog  = cfg.program || t.programs[0];
+            const iCls  = 'w-12 text-xs px-1 py-0.5 rounded border text-center';
+            const iSty  = 'border-color:var(--border);background:var(--bg-page);color:var(--text-main)';
+            const progOpts = t.programs.map(p =>
+                `<option value="${p}" ${p===prog?'selected':''}>${t.progNames[p]||p}</option>`).join('');
+            return `<div class="p-3 rounded-xl" style="background:var(--bg-page)">
+                <div class="text-xs font-bold mb-2" style="color:var(--text-main)">${t.label}</div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px]" style="color:var(--text-muted)">ทุก</span>
+                    <input type="number" id="ly-every-${t.key}" min="1" max="50" value="${every}"
+                        class="${iCls}" style="${iSty}"/>
+                    <span class="text-[10px]" style="color:var(--text-muted)">ครั้ง ได้รับ</span>
+                    <select id="ly-type-${t.key}" onchange="_toggleLoyaltyType('${t.key}')"
+                        class="text-xs px-1 py-0.5 rounded border" style="${iSty};border-color:var(--border)">
+                        <option value="credit" ${type==='credit'?'selected':''}>💰 Credit ฿</option>
+                        <option value="free"   ${type==='free'?'selected':''}>🎟️ ฟรีโปรแกรม</option>
+                    </select>
+                </div>
+                <div id="ly-credit-row-${t.key}" class="flex items-center gap-2 mt-2" style="display:${type==='credit'?'flex':'none'}!important">
+                    <span class="text-[10px]" style="color:var(--text-muted)">฿</span>
+                    <input type="number" id="ly-value-${t.key}" min="0" max="9999" value="${value}"
+                        class="${iCls}" style="${iSty}"/>
+                </div>
+                <div id="ly-free-row-${t.key}" class="flex items-center gap-2 mt-2" style="display:${type==='free'?'flex':'none'}!important">
+                    <span class="text-[10px]" style="color:var(--text-muted)">โปรแกรม:</span>
+                    <select id="ly-prog-${t.key}" class="text-xs px-1 py-0.5 rounded border flex-1" style="${iSty};border-color:var(--border)">
+                        ${progOpts}
+                    </select>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    window._toggleLoyaltyType = function(key) {
+        const type = document.getElementById(`ly-type-${key}`)?.value;
+        document.getElementById(`ly-credit-row-${key}`).style.display = type==='credit' ? 'flex' : 'none';
+        document.getElementById(`ly-free-row-${key}`).style.display   = type==='free'   ? 'flex' : 'none';
+    };
+
+    function _getLoyaltyCfg() {
+        const result = {};
+        LOYALTY_TYPES.forEach(t => {
+            const type = document.getElementById(`ly-type-${t.key}`)?.value || 'credit';
+            result[`loyalty_${t.key}`] = {
+                every:   parseInt(document.getElementById(`ly-every-${t.key}`)?.value) || 10,
+                type,
+                value:   parseFloat(document.getElementById(`ly-value-${t.key}`)?.value) || 0,
+                program: document.getElementById(`ly-prog-${t.key}`)?.value || t.programs[0],
+            };
+        });
+        return result;
+    }
+
     const MULT_PROGRAMS = ['cold','warm','hot','dryer','p1','p2','p3','p4'];
     const DEFAULT_MULTS = {cold:1,warm:2,hot:2,dryer:1,p1:2,p2:2,p3:2,p4:2};
 
@@ -2143,6 +2235,8 @@
             document.getElementById('setting-loyalty-program').value  = s.loyalty_program  ?? 'dryer-single';
             document.getElementById('setting-redeem-points').value    = s.redeem_points    ?? 100;
             document.getElementById('setting-redeem-baht').value      = s.redeem_baht      ?? 50;
+            // โหลด loyalty config per type
+            _renderLoyaltyCfg(s);
             // โหลด points_multipliers (หรือ fallback จาก double_point_programs เดิม)
             const mults = s.points_multipliers || (() => {
                 const dbl = s.double_point_programs || ['warm','hot','p1','p2','p3','p4'];
@@ -2168,6 +2262,7 @@
             redeem_points:     Number(document.getElementById('setting-redeem-points').value)||100,
             redeem_baht:       Number(document.getElementById('setting-redeem-baht').value)||50,
             points_multipliers: _getPointsMultipliers(),
+            ..._getLoyaltyCfg(),
         };
         try {
             await set(ref(database,'laundry_system/settings/members'), settings);

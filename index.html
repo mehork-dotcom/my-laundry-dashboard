@@ -685,15 +685,43 @@
         if (params.get('beam_return') === '1') {
             document.body.innerHTML = `
                 <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;
-                            justify-content:center;gap:16px;background:#0f1117;color:#fff;font-family:sans-serif;padding:24px;text-align:center">
-                    <div style="font-size:48px">✅</div>
-                    <div style="font-size:18px;font-weight:800">ชำระเงินสำเร็จ!</div>
-                    <div style="font-size:14px;color:#94a3b8">กำลังกลับสู่แอป LINE...</div>
-                    <div style="font-size:12px;color:#64748b;margin-top:8px">
-                        หากหน้านี้ไม่ปิดอัตโนมัติ<br>กรุณาปิดด้วยตนเองแล้วกลับไปที่แอป LINE
+                            justify-content:center;gap:20px;background:#0f1117;color:#fff;
+                            font-family:'Sarabun',sans-serif;padding:32px;text-align:center">
+                    <div style="font-size:72px;line-height:1">✅</div>
+                    <div style="font-size:22px;font-weight:800">ชำระเงินสำเร็จ!</div>
+                    <div style="font-size:15px;color:#94a3b8">ระบบกำลังสั่งเครื่อง<br>กรุณากลับไปที่แอป LINE</div>
+                    <a href="line://" id="line-back-btn"
+                        style="margin-top:8px;padding:14px 32px;background:#06C755;color:#fff;
+                               border-radius:999px;font-size:16px;font-weight:800;
+                               text-decoration:none;display:inline-block;
+                               box-shadow:0 4px 16px rgba(6,199,85,0.4)">
+                        📱 กลับสู่แอป LINE
+                    </a>
+                    <div style="font-size:12px;color:#475569;margin-top:4px">
+                        หรือปิดหน้านี้ด้วยตนเอง
                     </div>
                 </div>`;
-            setTimeout(() => { try { window.close(); } catch(e) {} }, 1500);
+
+            // พยายามปิด tab ด้วยหลายวิธี
+            function tryClose() {
+                // 1. LIFF closeWindow (ดีที่สุดใน LINE browser)
+                if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+                    try { liff.closeWindow(); return; } catch(e) {}
+                }
+                // 2. window.close (ใช้ได้บน Android Chrome / Desktop)
+                try { window.close(); } catch(e) {}
+            }
+
+            // รอให้ LIFF load ก่อน 0.5 วิ แล้วค่อยปิด
+            setTimeout(() => {
+                if (typeof liff !== 'undefined') {
+                    liff.init({ liffId: '2009916510-BLfQGxyM' })
+                        .then(() => { try { liff.closeWindow(); } catch(e) { tryClose(); } })
+                        .catch(() => tryClose());
+                } else {
+                    tryClose();
+                }
+            }, 500);
             return;
         }
     })();
@@ -1316,7 +1344,7 @@
                 document.getElementById('modal-copy-btn').innerHTML = '✅ คัดลอกแล้ว!';
                 setTimeout(() => {
                     document.getElementById('modal-copy-btn').innerHTML = '📋 คัดลอกข้อความ';
-                }, 2000);
+                }, 500);
             }).catch(() => {
                 // fallback สำหรับ browser ที่ไม่รองรับ clipboard
                 document.getElementById('modal-text').select?.();
@@ -1649,6 +1677,8 @@
         }
 
         // สร้าง TX สำหรับ points
+        const _ptsBtn = document.getElementById('pay-pts-btn');
+        if (_ptsBtn) { _ptsBtn.disabled = true; _ptsBtn.textContent = '⏳ กำลังดำเนินการ...'; }
         try {
             const res = await fetch(`${PAYMENT_API}/payment/create`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
@@ -1670,6 +1700,8 @@
             }
         } catch(e) {
             showToast(`❌ ${e.message}`, '⚠️', 4000);
+        } finally {
+            if (_ptsBtn) { _ptsBtn.disabled = false; _ptsBtn.innerHTML = '⭐ ใช้แต้มสะสม'; }
         }
     };
 
@@ -2467,11 +2499,17 @@ function createMachineHTML(name, info) {
                         // AQUA: จ่ายได้เสมอ
                         if (isAqua) {
                             const addTime = isBusy || st === 'busy';
-                            return `
-                            <button onclick="openPaymentModal('${name}','${displayName}',${addTime})"
-                                class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
-                                style="background:${addTime ? 'var(--s-dry)' : 'var(--brand)'};color:white">
-                                ${addTime ? '⏱️ เพิ่มรอบซัก' : '💳 จ่ายเงิน'}</button>`;
+                            // ── ล็อก AQUA จนกว่า M4 จะพร้อม ──
+                            if (addTime) {
+                                return `<button onclick="openPaymentModal('${name}','${displayName}',true)"
+                                    class="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black active:scale-95 transition-all"
+                                    style="background:var(--s-dry);color:white">⏱️ เพิ่มรอบซัก</button>`;
+                            }
+                            return `<div class="mt-2 w-full text-center text-[10px] py-2 rounded-xl"
+                                style="background:var(--bg-page);color:var(--text-muted)">
+                                🪙 รับเฉพาะเหรียญชั่วคราว<br>
+                                <span style="color:var(--text-sub);font-size:9px">(ระบบ AQUA อยู่ระหว่างพัฒนา)</span>
+                            </div>`;
                         }
                         return '';
                     })()}
@@ -2898,7 +2936,7 @@ function createMachineHTML(name, info) {
 
                 <!-- Points -->
                 <div id="pay-method-points" class="hidden">
-                    <button onclick="payWithPoints()"
+                    <button id="pay-pts-btn" onclick="payWithPoints()"
                         class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-95 transition-all border-2"
                         style="border-color:var(--brand);color:var(--text-main)">
                         <span class="text-xl">⭐</span>

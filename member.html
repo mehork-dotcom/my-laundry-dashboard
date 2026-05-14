@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>My Laundry — สมาชิก</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script type="module">
+import { initializeApp }           from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
+import { getDatabase, ref, get, set, update, query, orderByChild, equalTo }
+    from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js';
+window._fb = { initializeApp, getDatabase, ref, get, set, update, query, orderByChild, equalTo };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+    --brand:      #77333b;
+    --brand-light:#9a4a54;
+    --sage:       #829F82;
+    --bg-page:    #F2EDE8;
+    --bg-card:    #FDFAF7;
+    --text-main:  #2C1F1A;
+    --text-sub:   #7A6860;
+    --text-muted: #B0A098;
+    --border:     #DDD5CB;
+    --s-dry:      #C07B3A;
+    --s-wash:     #4F7BC4;
+}
+.dark {
+    --bg-page:   #17120F;
+    --bg-card:   #211916;
+    --text-main: #F0E8E0;
+    --text-sub:  #A89890;
+    --text-muted:#7A6E6A;
+    --border:    #3A2C28;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun',sans-serif;min-height:100vh}
+
+/* ── Topbar ──────────────────────────── */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;
+  padding:12px 16px;background:var(--bg-card);border-bottom:1px solid var(--border)}
+.topbar-back{width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;background:var(--bg-page);border:1px solid var(--border);
+  cursor:pointer;font-size:16px;color:var(--text-sub);flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:800;color:var(--text-main);flex:1}
+.topbar-action{font-size:12px;font-weight:700;color:var(--brand);cursor:pointer;
+  padding:6px 10px;border-radius:8px;background:color-mix(in srgb,var(--brand) 12%,transparent)}
+
+/* ── Cards ───────────────────────────── */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:16px}
+
+/* ── Profile Header ─────────────────── */
+.profile-wrap{padding:20px 16px 0}
+.profile-card{background:linear-gradient(135deg,var(--brand) 0%,#5a1e25 100%);
+  border-radius:20px;padding:20px;color:white;position:relative;overflow:hidden}
+.profile-card::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;
+  border-radius:50%;background:rgba(255,255,255,0.06)}
+.profile-card::after{content:'';position:absolute;bottom:-20px;left:40px;width:80px;height:80px;
+  border-radius:50%;background:rgba(255,255,255,0.04)}
+.profile-avatar{width:60px;height:60px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);
+  object-fit:cover;background:#5a1e25;display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0}
+.profile-level{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:20px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.9)}
+
+/* ── Stats row ───────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px 0}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
+  padding:12px 8px;text-align:center}
+.stat-val{font-size:20px;font-weight:900;color:var(--text-main);line-height:1}
+.stat-lbl{font-size:10px;color:var(--text-muted);margin-top:4px}
+
+/* ── Loyalty Stamps ──────────────────── */
+.stamp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.stamp{width:100%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:16px;border:2px dashed var(--border);
+  background:var(--bg-page);transition:all .2s}
+.stamp.filled{background:var(--brand);border:2px solid var(--brand);color:white}
+.stamp.reward{background:var(--sage);border:2px solid var(--sage);color:white}
+
+/* ── Tabs ────────────────────────────── */
+.tabs{display:flex;gap:4px;padding:12px 16px 0}
+.tab{flex:1;padding:9px 4px;border-radius:12px;font-size:12px;font-weight:700;
+  text-align:center;cursor:pointer;border:none;background:var(--bg-page);
+  color:var(--text-muted);transition:all .2s}
+.tab.active{background:var(--brand);color:white}
+
+/* ── History items ───────────────────── */
+.hist-item{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border)}
+.hist-item:last-child{border-bottom:none}
+.hist-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0}
+.hist-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.badge-success{background:color-mix(in srgb,var(--sage) 20%,transparent);color:var(--sage)}
+.badge-pending{background:color-mix(in srgb,var(--s-dry) 20%,transparent);color:var(--s-dry)}
+.badge-fail{background:color-mix(in srgb,var(--brand) 20%,transparent);color:var(--brand)}
+
+/* ── Edit form ───────────────────────── */
+.form-row{margin-bottom:12px}
+.form-label{font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px;display:block}
+.form-input{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border);
+  background:var(--bg-page);color:var(--text-main);font-size:13px;font-family:'Sarabun',sans-serif;outline:none}
+.form-input:focus{border-color:var(--brand)}
+.btn-save{width:100%;padding:12px;border-radius:14px;background:var(--brand);color:white;
+  font-size:14px;font-weight:800;border:none;cursor:pointer;margin-top:4px}
+.btn-save:active{opacity:.8}
+
+/* ── QR ──────────────────────────────── */
+#qr-box canvas,#qr-box img{border-radius:12px}
+
+/* ── Toast ───────────────────────────── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--text-main);color:var(--bg-page);padding:10px 20px;border-radius:40px;
+  font-size:13px;font-weight:700;z-index:999;transition:transform .3s;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Admin search ────────────────────── */
+.admin-bar{margin:12px 16px 0;display:flex;gap:8px}
+.admin-input{flex:1;padding:10px 14px;border-radius:12px;border:1.5px solid var(--brand);
+  background:var(--bg-page);color:var(--text-main);font-size:13px;font-family:'Sarabun',sans-serif}
+.admin-btn{padding:10px 14px;border-radius:12px;background:var(--brand);color:white;
+  border:none;cursor:pointer;font-weight:700;font-size:13px;white-space:nowrap}
+
+/* ── Loading / Empty ─────────────────── */
+.loading{text-align:center;padding:48px 16px;color:var(--text-muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--brand);
+  border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-pad{padding:12px 16px}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-back" onclick="history.back()">←</div>
+  <div class="topbar-title">👤 บัญชีสมาชิก</div>
+  <div id="theme-toggle" class="topbar-back" onclick="toggleTheme()" style="font-size:14px">☀️</div>
+</div>
+
+<!-- Admin search bar (hidden by default) -->
+<div id="admin-bar" class="admin-bar" style="display:none">
+  <input id="admin-uid-input" class="admin-input" placeholder="UID หรือชื่อสมาชิก…"/>
+  <button class="admin-btn" onclick="adminSearch()">ค้นหา</button>
+</div>
+
+<!-- Loading -->
+<div id="loading" class="loading">
+  <div class="spinner"></div>
+  <div style="font-size:13px">กำลังโหลด…</div>
+</div>
+
+<!-- Not logged in -->
+<div id="need-login" style="display:none;text-align:center;padding:60px 24px">
+  <div style="font-size:48px;margin-bottom:16px">🔐</div>
+  <div style="font-size:16px;font-weight:800;color:var(--text-main);margin-bottom:8px">ต้องเข้าสู่ระบบผ่าน LINE</div>
+  <div style="font-size:13px;color:var(--text-muted)">กรุณาเปิดหน้านี้ผ่านแอป LINE</div>
+</div>
+
+<!-- Registration Screen -->
+<div id="register-screen" style="display:none;padding:24px 16px;max-width:440px;margin:0 auto">
+
+  <!-- LINE member registration -->
+  <div id="reg-line" style="display:none">
+    <div style="text-align:center;margin-bottom:24px">
+      <div id="reg-avatar" style="width:72px;height:72px;border-radius:50%;background:var(--brand);
+        color:white;font-size:32px;display:flex;align-items:center;justify-content:center;
+        margin:0 auto 12px;border:3px solid var(--border)">👤</div>
+      <div style="font-size:18px;font-weight:900;color:var(--text-main)">สมัครสมาชิก</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">ร้านสะดวกซัก มายลอนดรี้</div>
+    </div>
+    <div style="background:color-mix(in srgb,var(--sage) 12%,transparent);border:1px solid var(--sage);
+      border-radius:14px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-sub)">
+      ✅ เข้าสู่ระบบด้วย LINE แล้ว — สมัครสมาชิกเพื่อเริ่มสะสมแต้ม
+    </div>
+    <div class="form-row">
+      <label class="form-label">ชื่อเล่น / ชื่อที่ต้องการแสดง <span style="color:var(--brand)">*</span></label>
+      <input id="reg-name" class="form-input" placeholder="ชื่อของคุณ…" maxlength="30"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">เบอร์โทรศัพท์ <span style="color:var(--text-muted)">(ไม่บังคับ)</span></label>
+      <input id="reg-phone-line" class="form-input" type="tel" placeholder="08X-XXX-XXXX" maxlength="15"/>
+    </div>
+    <button class="btn-save" onclick="registerLine()" style="margin-top:8px">
+      🎉 สมัครสมาชิก
+    </button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
+      สมัครแล้วรับแต้มทุกครั้งที่ใช้บริการ
+    </div>
+  </div>
+
+  <!-- Kiosk / phone-based registration -->
+  <div id="reg-kiosk" style="display:none">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px;margin-bottom:10px">📱</div>
+      <div style="font-size:18px;font-weight:900;color:var(--text-main)">สมัครด้วยเบอร์โทร</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">สะสมแต้มจากการหยอดเหรียญ</div>
+    </div>
+    <!-- toggle: phone vs LINE -->
+    <div style="display:flex;gap:6px;margin-bottom:20px">
+      <div onclick="showRegMode('kiosk')"
+        style="flex:1;text-align:center;padding:9px;border-radius:12px;font-size:12px;
+               font-weight:700;cursor:pointer;background:var(--brand);color:white" id="mode-kiosk-btn">
+        📱 เบอร์โทร
+      </div>
+      <div onclick="showRegMode('line-redirect')"
+        style="flex:1;text-align:center;padding:9px;border-radius:12px;font-size:12px;
+               font-weight:700;cursor:pointer;background:var(--bg-page);color:var(--text-muted)" id="mode-line-btn">
+        💬 ใช้ LINE แทน
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">ชื่อเล่น <span style="color:var(--brand)">*</span></label>
+      <input id="reg-name-kiosk" class="form-input" placeholder="ชื่อของคุณ…" maxlength="30"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">เบอร์โทรศัพท์ <span style="color:var(--brand)">*</span></label>
+      <input id="reg-phone-kiosk" class="form-input" type="tel" placeholder="08X-XXX-XXXX" maxlength="15"
+        oninput="checkPhoneAvailable(this.value)"/>
+      <div id="phone-check" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
+    </div>
+    <button class="btn-save" onclick="registerKiosk()" id="btn-reg-kiosk" style="margin-top:8px">
+      🎉 สมัครสมาชิก
+    </button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
+      ใช้เบอร์โทรนี้สะสมแต้มที่ตู้หยอดเหรียญได้ทุกครั้ง
+    </div>
+  </div>
+
+  <!-- Already have account? lookup -->
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">มีบัญชีอยู่แล้ว?</div>
+    <button onclick="showLookup()" style="background:transparent;border:1.5px solid var(--border);
+      color:var(--text-sub);padding:8px 20px;border-radius:10px;font-size:12px;
+      font-weight:700;cursor:pointer">🔍 ค้นหาด้วยเบอร์โทร</button>
+  </div>
+</div>
+
+<!-- Lookup existing account -->
+<div id="lookup-screen" style="display:none;padding:24px 16px;max-width:440px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:14px;font-weight:800;color:var(--text-main)">🔍 ค้นหาบัญชี</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">กรอกเบอร์โทรที่สมัครไว้</div>
+  </div>
+  <div class="form-row">
+    <label class="form-label">เบอร์โทรศัพท์</label>
+    <input id="lookup-phone" class="form-input" type="tel" placeholder="08X-XXX-XXXX"/>
+  </div>
+  <button class="btn-save" onclick="lookupByPhone()">ค้นหา →</button>
+  <div style="text-align:center;margin-top:12px">
+    <button onclick="showRegister()" style="background:transparent;border:none;
+      color:var(--text-muted);font-size:12px;cursor:pointer">← กลับ</button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div id="main" style="display:none;padding-bottom:40px">
+
+  <!-- Profile header -->
+  <div class="profile-wrap">
+    <div class="profile-card">
+      <div style="display:flex;align-items:center;gap:14px;position:relative;z-index:1">
+        <div id="avatar-wrap" class="profile-avatar">👤</div>
+        <div style="flex:1;min-width:0">
+          <div id="member-name" style="font-size:17px;font-weight:900;color:white;margin-bottom:4px">…</div>
+          <div id="member-level" class="profile-level">🌀 สมาชิก</div>
+          <div id="member-since" style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:5px">เป็นสมาชิกตั้งแต่ …</div>
+        </div>
+        <div style="text-align:right;position:relative;z-index:1">
+          <div id="pts-big" style="font-size:32px;font-weight:900;color:white;line-height:1">0</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.6)">แต้มสะสม</div>
+        </div>
+      </div>
+      <!-- Points progress bar -->
+      <div style="margin-top:14px;position:relative;z-index:1">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:5px">
+          <span>⭐ แต้มสะสม</span>
+          <span id="redeem-hint">100 แต้ม = ฿10</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden">
+          <div id="pts-bar" style="height:100%;background:white;border-radius:3px;transition:width .5s;width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div id="stat-uses" class="stat-val">0</div>
+      <div class="stat-lbl">ครั้งที่ซัก/อบ</div>
+    </div>
+    <div class="stat-card">
+      <div id="stat-spent" class="stat-val">฿0</div>
+      <div class="stat-lbl">ยอดรวม</div>
+    </div>
+    <div class="stat-card">
+      <div id="stat-credit" class="stat-val" style="color:var(--sage)">฿0</div>
+      <div class="stat-lbl">Credit</div>
+    </div>
+  </div>
+
+  <!-- Loyalty stamp card -->
+  <div class="section-pad">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:800;color:var(--text-main)">🎟️ สะสมครั้ง — รับฟรี</div>
+        <div id="stamp-counter" style="font-size:12px;font-weight:700;color:var(--brand)">0/10</div>
+      </div>
+      <div id="stamp-grid" class="stamp-grid"></div>
+      <div id="stamp-reward-hint" style="font-size:11px;color:var(--text-muted);margin-top:10px;text-align:center"></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-history" onclick="switchTab('history')">📋 ประวัติ</button>
+    <button class="tab" id="tab-info" onclick="switchTab('info')">✏️ ข้อมูล</button>
+    <button class="tab" id="tab-share" onclick="switchTab('share')">💳 บัตร</button>
+  </div>
+
+  <!-- Tab: History -->
+  <div id="pane-history" class="section-pad">
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <div id="htab-wash" onclick="switchHistTab('wash')"
+        style="flex:1;text-align:center;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:var(--brand);color:white">
+        🌀 การซัก/อบ</div>
+      <div id="htab-pay" onclick="switchHistTab('pay')"
+        style="flex:1;text-align:center;padding:7px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg-page);color:var(--text-muted)">
+        💰 การชำระเงิน</div>
+    </div>
+    <div class="card" style="padding:0 16px">
+      <div id="hist-list"><div class="loading" style="padding:24px 0"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- Tab: Personal info -->
+  <div id="pane-info" class="section-pad" style="display:none">
+    <div class="card">
+      <div style="font-size:13px;font-weight:800;color:var(--text-main);margin-bottom:14px">ข้อมูลส่วนตัว</div>
+      <div class="form-row">
+        <label class="form-label">ชื่อเล่น / ชื่อที่แสดง</label>
+        <input id="inp-name" class="form-input" placeholder="กรอกชื่อ…"/>
+      </div>
+      <div class="form-row">
+        <label class="form-label">เบอร์โทรศัพท์</label>
+        <input id="inp-phone" class="form-input" type="tel" placeholder="08X-XXX-XXXX"/>
+      </div>
+      <div class="form-row">
+        <label class="form-label">LINE User ID</label>
+        <input id="inp-uid" class="form-input" readonly style="opacity:.6;font-size:11px"/>
+      </div>
+      <button class="btn-save" onclick="saveInfo()">💾 บันทึกข้อมูล</button>
+    </div>
+  </div>
+
+  <!-- Tab: Member Card (Kiosk + Share) -->
+  <div id="pane-share" class="section-pad" style="display:none">
+
+    <!-- Digital Member Card -->
+    <div style="background:linear-gradient(135deg,#1a0a0c 0%,var(--brand) 60%,#5a1e25 100%);
+      border-radius:20px;padding:20px;color:white;margin-bottom:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;
+        border-radius:50%;background:rgba(255,255,255,0.05)"></div>
+      <div style="position:absolute;bottom:-30px;left:20px;width:80px;height:80px;
+        border-radius:50%;background:rgba(255,255,255,0.04)"></div>
+      <!-- Card header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px">MY LAUNDRY</div>
+          <div style="font-size:12px;font-weight:900;color:rgba(255,255,255,0.9)">MEMBER CARD</div>
+        </div>
+        <div id="card-level-badge" style="font-size:11px;font-weight:700;padding:4px 10px;
+          border-radius:20px;background:rgba(255,255,255,0.15)">🌀 สมาชิก</div>
+      </div>
+      <!-- QR code on card -->
+      <div style="display:flex;gap:16px;align-items:flex-end">
+        <div id="qr-box" style="background:white;border-radius:12px;padding:6px;flex-shrink:0"></div>
+        <div style="flex:1">
+          <div id="card-name" style="font-size:16px;font-weight:900;margin-bottom:4px">…</div>
+          <div id="card-phone" style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:8px"></div>
+          <div style="display:flex;gap:12px">
+            <div>
+              <div id="card-pts" style="font-size:20px;font-weight:900">0</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5)">แต้ม</div>
+            </div>
+            <div>
+              <div id="card-uses" style="font-size:20px;font-weight:900">0</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.5)">ครั้ง</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kiosk instructions -->
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:800;color:var(--text-main);margin-bottom:10px">🏪 วิธีใช้ที่ตู้</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);color:white;
+            font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+          <div style="font-size:12px;color:var(--text-sub)">แสดง QR บัตรนี้ให้พนักงาน<br>หรือสแกนที่ตู้ kiosk</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);color:white;
+            font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+          <div style="font-size:12px;color:var(--text-sub)">เลือกเครื่องและโปรแกรม<br>ที่ต้องการ</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--brand);color:white;
+            font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+          <div style="font-size:12px;color:var(--text-sub)">สแกน QR PromptPay จากตู้<br>ชำระเงิน — แต้มเข้าอัตโนมัติ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:8px">
+      <button onclick="copyLink()" style="flex:1;padding:11px;border-radius:13px;
+        background:var(--bg-card);border:1.5px solid var(--border);
+        color:var(--text-sub);font-size:12px;font-weight:700;cursor:pointer">
+        📋 คัดลอกลิงก์
+      </button>
+      <button onclick="shareCard()" style="flex:1;padding:11px;border-radius:13px;
+        background:var(--sage);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer">
+        📤 แชร์บัตร
+      </button>
+    </div>
+
+    <div id="qr-url" style="display:none"></div>
+  </div>
+
+</div>
+
+<!-- Admin: Member list (if no uid specified) -->
+<div id="admin-list" style="display:none;padding:12px 16px">
+  <div class="card" style="padding:0">
+    <div id="admin-members-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LIFF_ID  = '2009916510-BLfQGxyM';
+const DB_URL   = 'https://laundry-vending-system-default-rtdb.asia-southeast1.firebasedatabase.app/';
+const PAGE_URL = location.origin + location.pathname;
+
+const MACHINE_NAMES = {
+  W1:'เครื่องซัก 1',W2:'เครื่องซัก 2',W3:'เครื่องซัก 3',W4:'เครื่องซัก 4',
+  D5:'เครื่องอบ 5',D6:'เครื่องอบ 6',D7:'เครื่องอบ 7',D8:'เครื่องอบ 8',
+  AQUA9:'AQUA 9',AQUA10:'AQUA 10',
+};
+const PROG_NAMES = {
+  cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน',single:'อบผ้า',
+  p1:'P1-ซักอบ พิเศษ',p2:'P2-ซักอบ มาตรฐาน',p3:'P3-ซักน้ำอุ่น',p4:'P4-ซักน้ำเย็น',
+};
+
+let db, liffUserId, viewUid, isAdmin = false;
+let memberData = {}, settings = {}, allTx = [], curHistTab = 'wash';
+
+// ── Theme ────────────────────────────────────────────────
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  document.getElementById('theme-toggle').textContent =
+    document.documentElement.classList.contains('dark') ? '☀️' : '🌙';
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(name) {
+  ['history','info','share'].forEach(n => {
+    document.getElementById(`pane-${n}`).style.display = n === name ? '' : 'none';
+    document.getElementById(`tab-${n}`).classList.toggle('active', n === name);
+  });
+  if (name === 'share') renderQR();
+}
+
+function switchHistTab(name) {
+  curHistTab = name;
+  ['wash','pay'].forEach(n => {
+    const el = document.getElementById(`htab-${n}`);
+    el.style.background = n === name ? 'var(--brand)' : 'var(--bg-page)';
+    el.style.color      = n === name ? 'white'         : 'var(--text-muted)';
+  });
+  renderHistory();
+}
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const { initializeApp, getDatabase } = window._fb;
+  const app = initializeApp({ databaseURL: DB_URL });
+  db = getDatabase(app);
+
+  // check dark mode preference
+  if (!localStorage.getItem('theme') || localStorage.getItem('theme') === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.getElementById('theme-toggle').textContent = '☀️';
+  }
+
+  // URL param: admin viewing specific member
+  const params = new URLSearchParams(location.search);
+  viewUid = params.get('uid') || null;
+
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) {
+      liff.login({ redirectUri: location.href });
+      return;
+    }
+    liffUserId = liff.getContext()?.userId || null;
+
+    // check admin
+    if (liffUserId) {
+      const { ref, get } = window._fb;
+      const aSnap = await get(ref(db, `laundry_system/admin_users/${liffUserId}`));
+      isAdmin = aSnap.exists() && aSnap.val() !== false;
+    }
+
+    if (isAdmin) {
+      document.getElementById('admin-bar').style.display = 'flex';
+    }
+
+    // load settings
+    const { ref, get } = window._fb;
+    const sSnap = await get(ref(db, 'laundry_system/settings/members'));
+    settings = sSnap.exists() ? sSnap.val() : {};
+
+    // determine which uid to display
+    const targetUid = viewUid || liffUserId;
+    if (!targetUid) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('need-login').style.display = '';
+      return;
+    }
+
+    await loadMember(targetUid);
+
+  } catch (e) {
+    console.error(e);
+    // not in LINE LIFF — show need-login
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('need-login').style.display = '';
+  }
+});
+
+// ── Load Member ───────────────────────────────────────────
+async function loadMember(uid) {
+  const { ref, get } = window._fb;
+  document.getElementById('loading').style.display = '';
+  document.getElementById('main').style.display = 'none';
+
+  // ── ตรวจ new member ──────────────────────────────────────
+  const isLiff = !!(liff && liff.isLoggedIn && liff.isLoggedIn());
+  const isNew  = await checkAndShowRegistration(uid, isLiff && uid === liffUserId);
+  if (isNew) return;  // แสดง registration screen แทน
+
+  const [mSnap, txSnap] = await Promise.all([
+    get(ref(db, `laundry_system/members/${uid}`)),
+    get(ref(db, 'laundry_system/transactions')),
+  ]);
+
+  memberData = mSnap.exists() ? mSnap.val() : {};
+  const txAll = txSnap.exists() ? txSnap.val() : {};
+
+  // filter transactions for this user
+  allTx = Object.entries(txAll)
+    .filter(([, tx]) => tx?.user_id === uid)
+    .map(([id, tx]) => ({ id, ...tx }))
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+  renderProfile(uid);
+  renderStamps();
+  renderHistory();
+  renderInfo(uid);
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = '';
+}
+
+// ── Profile ───────────────────────────────────────────────
+function renderProfile(uid) {
+  const pts        = parseInt(memberData.points || 0);
+  const uses       = parseInt(memberData.total_uses || 0);
+  const spent      = parseFloat(memberData.total_spent || 0);
+  const credit     = parseFloat(memberData.credit_balance || 0);
+  const joinedAt   = memberData.joined_at || '';
+  const nickName   = memberData.name || (uid === liffUserId ? 'คุณ' : uid.slice(0, 10) + '…');
+
+  document.getElementById('pts-big').textContent    = pts.toLocaleString();
+  document.getElementById('member-name').textContent = nickName;
+  document.getElementById('stat-uses').textContent   = uses.toLocaleString();
+  document.getElementById('stat-spent').textContent  = '฿' + spent.toLocaleString();
+  document.getElementById('stat-credit').textContent = '฿' + credit.toFixed(0);
+
+  // member since
+  if (joinedAt) {
+    const d = new Date(joinedAt);
+    document.getElementById('member-since').textContent = 'สมาชิกตั้งแต่ ' +
+      d.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  // level badge
+  const level = uses >= 50 ? '💎 Gold' : uses >= 20 ? '⭐ Silver' : '🌀 สมาชิก';
+  document.getElementById('member-level').textContent = level;
+
+  // points progress bar (toward next 100 pts redemption)
+  const redeemPts = parseInt(settings.redeem_points || 100);
+  const pct = Math.min(100, (pts % redeemPts) / redeemPts * 100);
+  document.getElementById('pts-bar').style.width = pct + '%';
+  const redeemBaht = settings.redeem_baht || 10;
+  document.getElementById('redeem-hint').textContent =
+    `${redeemPts} แต้ม = ฿${redeemBaht} (มีอยู่ ${pts} แต้ม)`;
+
+  // LINE avatar
+  if (uid === liffUserId && liff.isLoggedIn()) {
+    try {
+      liff.getProfile().then(p => {
+        const wrap = document.getElementById('avatar-wrap');
+        if (p.pictureUrl) {
+          wrap.innerHTML = `<img src="${p.pictureUrl}" style="width:60px;height:60px;border-radius:50%;object-fit:cover"/>`;
+        }
+        if (!memberData.name) document.getElementById('member-name').textContent = p.displayName;
+      }).catch(() => {});
+    } catch(e) {}
+  }
+
+  // admin viewing indicator
+  if (viewUid && viewUid !== liffUserId) {
+    document.querySelector('.topbar-title').textContent = `👀 ดูโปรไฟล์: ${uid.slice(0,8)}…`;
+  }
+}
+
+// ── Loyalty Stamps ────────────────────────────────────────
+function renderStamps() {
+  const stamps    = parseInt(memberData.loyalty_stamps || 0);
+  const every     = parseInt(settings.loyalty_every || 10);
+  const progName  = settings.loyalty_program || 'dryer-single';
+  const current   = stamps % every;
+  const grid      = document.getElementById('stamp-grid');
+
+  grid.style.gridTemplateColumns = `repeat(${Math.min(every, 5)}, 1fr)`;
+  grid.innerHTML = Array.from({ length: every }, (_, i) => {
+    const filled = i < current;
+    const isLast = i === every - 1;
+    return `<div class="stamp ${filled ? 'filled' : ''} ${isLast ? 'reward' : ''}">
+      ${isLast ? '🎁' : filled ? '✓' : (i + 1)}
+    </div>`;
+  }).join('');
+
+  document.getElementById('stamp-counter').textContent = `${current}/${every}`;
+  const rewardLabel = progName.includes('dryer') ? 'ซักฟรี 1 รอบ' : 'ส่วนลดพิเศษ';
+  document.getElementById('stamp-reward-hint').textContent =
+    `สะสมครบ ${every} ครั้ง รับ ${rewardLabel} ฟรี! (สะสมแล้ว ${stamps} รอบทั้งหมด)`;
+}
+
+// ── History ───────────────────────────────────────────────
+function renderHistory() {
+  const container = document.getElementById('hist-list');
+  const isWash = curHistTab === 'wash';
+
+  // For wash: show started/free/credited tx
+  // For pay: show all tx with paid_amount > 0
+  let items = allTx.filter(tx => {
+    if (isWash) return ['started','free','credited'].includes(tx.status);
+    return parseFloat(tx.paid_amount || 0) > 0 || tx.status === 'started';
+  }).slice(0, 30);
+
+  if (!items.length) {
+    container.innerHTML = `<div style="padding:32px 0;text-align:center;color:var(--text-muted);font-size:13px">
+      ยังไม่มีประวัติ</div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(tx => {
+    const mid      = tx.machine_id || '';
+    const prog     = tx.program || '';
+    const mName    = MACHINE_NAMES[mid] || mid;
+    const pName    = PROG_NAMES[prog] || prog.toUpperCase();
+    const paid     = parseFloat(tx.paid_amount || 0);
+    const pts      = parseInt(tx.points_earned || 0);
+    const status   = tx.status || '';
+    const dateStr  = tx.created_at
+      ? new Date(tx.created_at).toLocaleDateString('th-TH',
+          { day:'numeric', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' })
+      : '—';
+
+    const isDryer  = mid.startsWith('D');
+    const iconBg   = isDryer
+      ? 'color-mix(in srgb,var(--s-dry) 15%,transparent)'
+      : 'color-mix(in srgb,var(--s-wash) 15%,transparent)';
+    const icon = isDryer ? '🔥' : '🌀';
+
+    let badgeHTML = '';
+    if (status === 'started')  badgeHTML = `<span class="hist-badge badge-success">สำเร็จ</span>`;
+    else if (status === 'free') badgeHTML = `<span class="hist-badge badge-success">ฟรี</span>`;
+    else if (status === 'credited') badgeHTML = `<span class="hist-badge badge-pending">คืน credit</span>`;
+    else if (status === 'expired')  badgeHTML = `<span class="hist-badge badge-fail">หมดอายุ</span>`;
+    else if (status === 'cancelled') badgeHTML = `<span class="hist-badge badge-fail">ยกเลิก</span>`;
+    else badgeHTML = `<span class="hist-badge badge-pending">${status}</span>`;
+
+    const rightHTML = isWash
+      ? `<div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:var(--text-main)">
+            ${paid > 0 ? `฿${paid.toFixed(0)}` : 'ฟรี'}
+          </div>
+          ${pts > 0 ? `<div style="font-size:10px;color:var(--sage)">+${pts} แต้ม</div>` : ''}
+         </div>`
+      : `<div style="text-align:right">
+          <div style="font-size:14px;font-weight:900;color:var(--text-main)">฿${paid.toFixed(0)}</div>
+          ${pts > 0 ? `<div style="font-size:10px;color:var(--sage)">+${pts} แต้ม</div>` : ''}
+         </div>`;
+
+    return `<div class="hist-item">
+      <div class="hist-icon" style="background:${iconBg}">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text-main)">${mName}</div>
+        <div style="font-size:11px;color:var(--text-sub)">${pName} · ${dateStr}</div>
+        <div style="margin-top:3px">${badgeHTML}</div>
+      </div>
+      ${rightHTML}
+    </div>`;
+  }).join('');
+}
+
+// ── Personal Info ─────────────────────────────────────────
+function renderInfo(uid) {
+  document.getElementById('inp-name').value  = memberData.name  || '';
+  document.getElementById('inp-phone').value = memberData.phone || '';
+  document.getElementById('inp-uid').value   = uid;
+}
+
+async function saveInfo() {
+  const uid = viewUid || liffUserId;
+  if (!uid) return;
+  const name  = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  const { ref, update } = window._fb;
+  try {
+    await update(ref(db, `laundry_system/members/${uid}`), { name, phone });
+    memberData.name  = name;
+    memberData.phone = phone;
+    if (name) document.getElementById('member-name').textContent = name;
+    showToast('✅ บันทึกข้อมูลแล้ว');
+  } catch(e) {
+    showToast('❌ เกิดข้อผิดพลาด');
+  }
+}
+
+// ── QR Share ──────────────────────────────────────────────
+const KIOSK_URL = location.origin + location.pathname.replace('member.html','') + 'kiosk.html';
+
+function renderQR() {
+  const uid = viewUid || liffUserId;
+  if (!uid) return;
+
+  // QR links to kiosk page with member UID — kiosk reads ?member_uid=xxx
+  const kioskUrl = `${KIOSK_URL}?member_uid=${encodeURIComponent(uid)}`;
+  const box      = document.getElementById('qr-box');
+  const urlEl    = document.getElementById('qr-url');
+  if (urlEl) urlEl.textContent = kioskUrl;
+
+  if (box && !box.children.length) {
+    box.innerHTML = '';
+    // QR บนบัตร: สีขาวบนพื้นมืด (เพราะ card มีพื้นหลังสี)
+    new QRCode(box, {
+      text: kioskUrl, width: 100, height: 100,
+      colorDark: '#1a0a0c', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  }
+
+  // อัปเดต card info
+  const name  = memberData.name  || 'สมาชิก';
+  const phone = memberData.phone || memberData.user_id?.replace('phone_','') || '';
+  const pts   = parseInt(memberData.points || 0);
+  const uses  = parseInt(memberData.total_uses || 0);
+  const level = uses >= 50 ? '💎 Gold' : uses >= 20 ? '⭐ Silver' : '🌀 สมาชิก';
+
+  const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  setEl('card-name', name);
+  setEl('card-phone', phone ? `📱 ${phone}` : '');
+  setEl('card-pts', pts.toLocaleString());
+  setEl('card-uses', uses.toLocaleString());
+  setEl('card-level-badge', level);
+  setEl('member-level', level);  // sync with profile header too
+}
+
+function copyLink() {
+  const uid = viewUid || liffUserId;
+  const url = `${PAGE_URL}?uid=${uid}`;
+  navigator.clipboard?.writeText(url)
+    .then(() => showToast('✅ คัดลอกลิงก์แล้ว'))
+    .catch(() => showToast('❌ ไม่สามารถคัดลอกได้'));
+}
+
+function shareCard() {
+  const uid  = viewUid || liffUserId;
+  const url  = `${PAGE_URL}?uid=${uid}`;
+  const name = memberData.name || 'สมาชิก';
+  if (navigator.share) {
+    navigator.share({ title: `บัตรสมาชิก My Laundry — ${name}`, url })
+      .catch(() => {});
+  } else {
+    copyLink();
+  }
+}
+window.shareCard = shareCard;
+
+// ── Admin Search ──────────────────────────────────────────
+async function adminSearch() {
+  if (!isAdmin) return;
+  const q = document.getElementById('admin-uid-input').value.trim();
+  if (!q) return;
+  const { ref, get } = window._fb;
+
+  // Try exact UID match first
+  const snap = await get(ref(db, `laundry_system/members/${q}`));
+  if (snap.exists()) {
+    viewUid = q;
+    await loadMember(q);
+    return;
+  }
+
+  // Search by name
+  const allSnap = await get(ref(db, 'laundry_system/members'));
+  if (!allSnap.exists()) { showToast('ไม่พบสมาชิก'); return; }
+  const all = allSnap.val();
+  const found = Object.entries(all).find(([, m]) =>
+    (m.name || '').toLowerCase().includes(q.toLowerCase()) ||
+    (m.phone || '').includes(q));
+
+  if (found) {
+    viewUid = found[0];
+    await loadMember(found[0]);
+  } else {
+    // Show member list
+    renderAdminList(all);
+  }
+}
+
+function renderAdminList(members) {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('admin-list').style.display = '';
+  const list = document.getElementById('admin-members-list');
+  const entries = Object.entries(members).sort((a,b) =>
+    parseInt(b[1].points||0) - parseInt(a[1].points||0));
+
+  list.innerHTML = entries.map(([uid, m]) => `
+    <div onclick="viewMember('${uid}')"
+      style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+             border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="width:38px;height:38px;border-radius:50%;background:var(--brand);
+        color:white;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text-main)">${m.name || uid.slice(0,12)+'…'}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${m.phone||''} · ใช้ ${m.total_uses||0} ครั้ง</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:800;color:var(--brand)">${parseInt(m.points||0).toLocaleString()}</div>
+        <div style="font-size:10px;color:var(--text-muted)">แต้ม</div>
+      </div>
+    </div>`).join('');
+}
+
+async function viewMember(uid) {
+  document.getElementById('admin-list').style.display = 'none';
+  viewUid = uid;
+  await loadMember(uid);
+}
+window.viewMember = viewMember;
+
+// ── Registration helpers ──────────────────────────────────
+let _regPhoneTimer = null;
+
+function showRegister() {
+  document.getElementById('lookup-screen').style.display = 'none';
+  document.getElementById('register-screen').style.display = '';
+}
+function showLookup() {
+  document.getElementById('register-screen').style.display = 'none';
+  document.getElementById('lookup-screen').style.display = '';
+}
+
+function showRegMode(mode) {
+  if (mode === 'line-redirect') {
+    // LINE login ไม่ได้อยู่ใน LIFF — redirect ไป LINE
+    if (liff && !liff.isLoggedIn()) {
+      liff.login({ redirectUri: location.href });
+    } else {
+      showToast('เปิดหน้านี้ผ่านแอป LINE ได้เลยครับ', 3000);
+    }
+    return;
+  }
+  // toggle button styles
+  document.getElementById('mode-kiosk-btn').style.background = 'var(--brand)';
+  document.getElementById('mode-kiosk-btn').style.color      = 'white';
+  document.getElementById('mode-line-btn').style.background  = 'var(--bg-page)';
+  document.getElementById('mode-line-btn').style.color       = 'var(--text-muted)';
+}
+
+// ── detect registration mode on load ─────────────────────
+async function checkAndShowRegistration(uid, isLiff) {
+  const { ref, get } = window._fb;
+  const snap = await get(ref(db, `laundry_system/members/${uid}`));
+  if (snap.exists()) return false; // already registered → load normally
+
+  // show registration
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('register-screen').style.display = '';
+
+  if (isLiff) {
+    document.getElementById('reg-line').style.display = '';
+    document.getElementById('reg-kiosk').style.display = 'none';
+    // pre-fill from LINE profile
+    try {
+      const profile = await liff.getProfile();
+      document.getElementById('reg-name').value = profile.displayName || '';
+      const wrap = document.getElementById('reg-avatar');
+      if (profile.pictureUrl) {
+        wrap.innerHTML = `<img src="${profile.pictureUrl}" style="width:72px;height:72px;border-radius:50%;object-fit:cover"/>`;
+      }
+    } catch(e) {}
+  } else {
+    document.getElementById('reg-kiosk').style.display = '';
+    document.getElementById('reg-line').style.display = 'none';
+  }
+  return true; // is new member
+}
+
+// ── LINE registration ─────────────────────────────────────
+async function registerLine() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const phone = document.getElementById('reg-phone-line').value.trim();
+  if (!name) { showToast('⚠️ กรุณากรอกชื่อ'); return; }
+
+  const { ref, set } = window._fb;
+  const now = new Date().toISOString();
+  const uid = liffUserId;
+  try {
+    await set(ref(db, `laundry_system/members/${uid}`), {
+      user_id: uid, name, phone, points: 0,
+      total_uses: 0, total_spent: 0, loyalty_stamps: 0,
+      credit_balance: 0, joined_at: now, member_type: 'line',
+    });
+    showToast('🎉 สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ');
+    document.getElementById('register-screen').style.display = 'none';
+    await loadMember(uid);
+  } catch(e) { showToast('❌ เกิดข้อผิดพลาด: ' + e.message); }
+}
+
+// ── Check phone availability ──────────────────────────────
+async function checkPhoneAvailable(phone) {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const hint = document.getElementById('phone-check');
+  if (cleanPhone.length < 9) { hint.textContent = ''; return; }
+
+  clearTimeout(_regPhoneTimer);
+  hint.textContent = '⏳ กำลังตรวจสอบ…';
+  hint.style.color = 'var(--text-muted)';
+
+  _regPhoneTimer = setTimeout(async () => {
+    const { ref, get } = window._fb;
+    const uid = 'phone_' + cleanPhone;
+    const snap = await get(ref(db, `laundry_system/members/${uid}`));
+    if (snap.exists()) {
+      hint.textContent = '⚠️ เบอร์นี้มีบัญชีอยู่แล้ว — ลองค้นหาด้านล่าง';
+      hint.style.color = 'var(--s-dry)';
+      document.getElementById('btn-reg-kiosk').disabled = true;
+    } else {
+      hint.textContent = '✅ เบอร์นี้สามารถสมัครได้';
+      hint.style.color = 'var(--sage)';
+      document.getElementById('btn-reg-kiosk').disabled = false;
+    }
+  }, 600);
+}
+
+// ── Kiosk (phone) registration ────────────────────────────
+async function registerKiosk() {
+  const name  = document.getElementById('reg-name-kiosk').value.trim();
+  const phone = document.getElementById('reg-phone-kiosk').value.replace(/\D/g,'');
+  if (!name)          { showToast('⚠️ กรุณากรอกชื่อ'); return; }
+  if (phone.length < 9) { showToast('⚠️ กรุณากรอกเบอร์โทรให้ถูกต้อง'); return; }
+
+  const { ref, set, get } = window._fb;
+  const uid = 'phone_' + phone;
+  // double-check availability
+  const snap = await get(ref(db, `laundry_system/members/${uid}`));
+  if (snap.exists()) {
+    showToast('⚠️ เบอร์นี้มีบัญชีอยู่แล้ว');
+    return;
+  }
+  const now = new Date().toISOString();
+  try {
+    await set(ref(db, `laundry_system/members/${uid}`), {
+      user_id: uid, name, phone, points: 0,
+      total_uses: 0, total_spent: 0, loyalty_stamps: 0,
+      credit_balance: 0, joined_at: now, member_type: 'kiosk',
+    });
+    showToast('🎉 สมัครสมาชิกสำเร็จ!');
+    document.getElementById('register-screen').style.display = 'none';
+    viewUid = uid;
+    await loadMember(uid);
+  } catch(e) { showToast('❌ เกิดข้อผิดพลาด: ' + e.message); }
+}
+
+// ── Lookup by phone ───────────────────────────────────────
+async function lookupByPhone() {
+  const phone = document.getElementById('lookup-phone').value.replace(/\D/g,'');
+  if (phone.length < 9) { showToast('⚠️ กรุณากรอกเบอร์โทร'); return; }
+
+  const { ref, get } = window._fb;
+  const uid  = 'phone_' + phone;
+  const snap = await get(ref(db, `laundry_system/members/${uid}`));
+  if (snap.exists()) {
+    viewUid = uid;
+    document.getElementById('lookup-screen').style.display = 'none';
+    await loadMember(uid);
+  } else {
+    showToast('ไม่พบบัญชีนี้ — ลองสมัครใหม่ครับ', 3000);
+  }
+}
+window.lookupByPhone = lookupByPhone;
+window.registerLine  = registerLine;
+window.registerKiosk = registerKiosk;
+window.showRegister  = showRegister;
+window.showLookup    = showLookup;
+window.showRegMode   = showRegMode;
+window.checkPhoneAvailable = checkPhoneAvailable;
+</script>
+</body>
+</html>

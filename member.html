@@ -471,6 +471,86 @@ html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun'
     <div id="qr-url" style="display:none"></div>
   </div>
 
+  <!-- Admin Action Panel (เห็นเฉพาะ admin) -->
+  <div id="admin-action-panel" style="display:none;padding:0 16px 16px">
+    <div style="border-radius:16px;overflow:hidden;border:1.5px solid var(--brand)">
+      <!-- Header -->
+      <div style="background:color-mix(in srgb,var(--brand) 15%,transparent);
+        padding:12px 16px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:13px;font-weight:900;color:var(--brand)">⚙️ Admin Actions</div>
+        <div id="admin-viewing-uid" style="font-size:10px;color:var(--text-muted);flex:1"></div>
+      </div>
+      <!-- Credit -->
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px">
+          💰 เพิ่ม/ลด Credit เงินคืน
+        </div>
+        <div style="display:flex;gap-8px;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:4px;flex:1">
+            <span style="font-size:12px;color:var(--text-muted)">฿</span>
+            <input id="admin-credit-amount" type="number" placeholder="จำนวน (ลบได้)"
+              class="form-input" style="margin:0"/>
+          </div>
+          <button onclick="adminAdjustCredit()"
+            style="padding:9px 14px;border-radius:12px;background:var(--brand);
+              color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+            ✅ บันทึก
+          </button>
+        </div>
+        <input id="admin-credit-reason" class="form-input" placeholder="เหตุผล เช่น เครื่องเสีย, ชดเชย…"
+          style="margin-top:6px;font-size:12px"/>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+          * ใส่ตัวเลขติดลบเพื่อหัก credit
+        </div>
+      </div>
+      <!-- Points -->
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px">
+          ⭐ เพิ่ม/ลด แต้มสะสม
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input id="admin-pts-amount" type="number" placeholder="จำนวนแต้ม (ลบได้)"
+            class="form-input" style="margin:0;flex:1"/>
+          <button onclick="adminAdjustPoints()"
+            style="padding:9px 14px;border-radius:12px;background:var(--sage);
+              color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+            ✅ บันทึก
+          </button>
+        </div>
+        <input id="admin-pts-reason" class="form-input" placeholder="เหตุผล เช่น Bonus, แก้ไขแต้ม…"
+          style="margin-top:6px;font-size:12px"/>
+      </div>
+      <!-- Add voucher -->
+      <div style="padding:14px 16px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:8px">
+          🎟️ มอบสิทธิ์ฟรี (Voucher)
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <select id="admin-voucher-type" class="form-input" style="margin:0;flex:1;font-size:12px">
+            <option value="washer">🌀 Washer</option>
+            <option value="dryer">🔥 Dryer</option>
+            <option value="aqua">✨ AQUA</option>
+          </select>
+          <select id="admin-voucher-prog" class="form-input" style="margin:0;flex:1;font-size:12px">
+            <option value="cold">น้ำเย็น</option>
+            <option value="warm">น้ำอุ่น</option>
+            <option value="hot">น้ำร้อน</option>
+          </select>
+        </div>
+        <button onclick="adminGrantVoucher()"
+          style="width:100%;margin-top:8px;padding:9px;border-radius:12px;
+            background:color-mix(in srgb,var(--sage) 80%,transparent);
+            color:white;border:none;font-size:12px;font-weight:700;cursor:pointer">
+          🎁 มอบสิทธิ์ฟรี 1 ครั้ง
+        </button>
+      </div>
+    </div>
+
+    <!-- Adjustment log -->
+    <div id="admin-adj-log" style="margin-top:8px;font-size:11px;color:var(--text-muted);
+      padding:8px 12px;background:var(--bg-card);border-radius:10px;display:none"></div>
+  </div>
+
 </div>
 
 <!-- Admin: Member list (if no uid specified) -->
@@ -624,6 +704,7 @@ async function loadMember(uid) {
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('main').style.display = '';
+  _showAdminPanel(uid);
 }
 
 // ── Profile ───────────────────────────────────────────────
@@ -1001,6 +1082,117 @@ async function viewMember(uid) {
   await loadMember(uid);
 }
 window.viewMember = viewMember;
+
+// ── Admin Actions ─────────────────────────────────────────
+function _showAdminPanel(uid) {
+  const panel = document.getElementById('admin-action-panel');
+  if (!panel || !isAdmin) return;
+  const isOwnProfile = uid === liffUserId;
+  panel.style.display = isOwnProfile ? 'none' : '';  // ไม่แสดงเมื่อดูตัวเอง
+  const uidEl = document.getElementById('admin-viewing-uid');
+  if (uidEl) uidEl.textContent = uid.slice(0, 16) + (uid.length > 16 ? '…' : '');
+  // อัปเดต voucher type/program dropdown
+  const typeEl = document.getElementById('admin-voucher-type');
+  if (typeEl) typeEl.onchange = _updateVoucherPrograms;
+  _updateVoucherPrograms();
+}
+
+function _updateVoucherPrograms() {
+  const type = document.getElementById('admin-voucher-type')?.value;
+  const progEl = document.getElementById('admin-voucher-prog');
+  if (!progEl) return;
+  const opts = {
+    washer: [{v:'cold',l:'น้ำเย็น'},{v:'warm',l:'น้ำอุ่น'},{v:'hot',l:'น้ำร้อน'}],
+    dryer:  [{v:'single',l:'อบผ้า'}],
+    aqua:   [{v:'p1',l:'P1-ซักอบ พิเศษ'},{v:'p2',l:'P2-มาตรฐาน'},
+              {v:'p3',l:'P3-น้ำอุ่น'},{v:'p4',l:'P4-น้ำเย็น'}],
+  };
+  progEl.innerHTML = (opts[type]||[]).map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+}
+window._updateVoucherPrograms = _updateVoucherPrograms;
+
+function _logAction(msg, success = true) {
+  const el = document.getElementById('admin-adj-log');
+  if (!el) return;
+  el.style.display = '';
+  el.style.color   = success ? 'var(--sage)' : 'var(--brand)';
+  el.textContent   = `${success ? '✅' : '❌'} ${msg}`;
+}
+
+async function adminAdjustCredit() {
+  const uid    = viewUid || liffUserId;
+  const amount = parseFloat(document.getElementById('admin-credit-amount')?.value || '0');
+  const reason = document.getElementById('admin-credit-reason')?.value?.trim() || 'Admin adjustment';
+  if (!uid || isNaN(amount) || amount === 0) { _logAction('กรอกจำนวนให้ถูกต้อง', false); return; }
+
+  const { ref, get, update } = window._fb;
+  const mr   = ref(db, `laundry_system/members/${uid}`);
+  const snap = await get(mr);
+  const cur  = parseFloat(snap.val()?.credit_balance || 0);
+  const newC = Math.max(0, cur + amount);
+
+  await update(mr, { credit_balance: newC });
+  // log ใน Firebase
+  await update(ref(db, `laundry_system/admin_adjustments/${Date.now()}`), {
+    uid, type: 'credit', amount, reason,
+    by: liffUserId, at: new Date().toISOString(),
+    before: cur, after: newC,
+  });
+
+  memberData.credit_balance = newC;
+  document.getElementById('stat-credit').textContent = '฿' + newC.toFixed(0);
+  document.getElementById('admin-credit-amount').value = '';
+  document.getElementById('admin-credit-reason').value = '';
+  renderProfile(uid);
+  _logAction(`Credit: ฿${cur.toFixed(0)} → ฿${newC.toFixed(0)} (${amount >= 0 ? '+' : ''}${amount})`);
+  showToast(`✅ Credit อัปเดตแล้ว: ฿${newC.toFixed(0)}`);
+}
+window.adminAdjustCredit = adminAdjustCredit;
+
+async function adminAdjustPoints() {
+  const uid    = viewUid || liffUserId;
+  const amount = parseInt(document.getElementById('admin-pts-amount')?.value || '0');
+  const reason = document.getElementById('admin-pts-reason')?.value?.trim() || 'Admin adjustment';
+  if (!uid || isNaN(amount) || amount === 0) { _logAction('กรอกจำนวนให้ถูกต้อง', false); return; }
+
+  const { ref, get, update } = window._fb;
+  const mr   = ref(db, `laundry_system/members/${uid}`);
+  const snap = await get(mr);
+  const cur  = parseInt(snap.val()?.points || 0);
+  const newP = Math.max(0, cur + amount);
+
+  await update(mr, { points: newP });
+  await update(ref(db, `laundry_system/admin_adjustments/${Date.now()}`), {
+    uid, type: 'points', amount, reason,
+    by: liffUserId, at: new Date().toISOString(),
+    before: cur, after: newP,
+  });
+
+  memberData.points = newP;
+  document.getElementById('admin-pts-amount').value = '';
+  document.getElementById('admin-pts-reason').value = '';
+  renderProfile(uid);
+  _logAction(`แต้ม: ${cur} → ${newP} (${amount >= 0 ? '+' : ''}${amount})`);
+  showToast(`✅ แต้มอัปเดตแล้ว: ${newP} แต้ม`);
+}
+window.adminAdjustPoints = adminAdjustPoints;
+
+async function adminGrantVoucher() {
+  const uid   = viewUid || liffUserId;
+  const type  = document.getElementById('admin-voucher-type')?.value;
+  const prog  = document.getElementById('admin-voucher-prog')?.value;
+  if (!uid || !type || !prog) return;
+
+  const { ref, push } = window._fb;
+  const exp = new Date(Date.now() + 30 * 86400000).toISOString();
+  await push(ref(db, `laundry_system/members/${uid}/loyalty_vouchers`), {
+    type, program: prog, earned_at: new Date().toISOString(),
+    expires_at: exp, used: false, source: `admin_grant_${liffUserId?.slice(0,8)}`,
+  });
+  _logAction(`มอบสิทธิ์ฟรี ${type} — ${prog} แล้ว`);
+  showToast('🎟️ มอบสิทธิ์ฟรีแล้ว');
+}
+window.adminGrantVoucher = adminGrantVoucher;
 
 // ── Registration helpers ──────────────────────────────────
 let _regPhoneTimer = null;

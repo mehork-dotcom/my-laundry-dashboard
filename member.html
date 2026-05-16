@@ -887,19 +887,48 @@ function renderStamps() {
       ? Math.round(((effective - fromAt) / (nextMs.at - fromAt)) * 100)
       : 100;
 
+    // milestone rows with redeem button
+    const msHtml2 = milestones.map(m => {
+      const canRedeem = totalStamp >= m.at;
+      const used      = false; // tracked server-side
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+          background:${canRedeem?'var(--sage)':'var(--border)'};color:${canRedeem?'white':'var(--text-muted)'}">
+          ${canRedeem ? '🎁' : m.at}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--text-main)">
+            ครบ ${m.at} สแตมป์ → ${_rewardLabel(m)}
+          </div>
+          ${canRedeem
+            ? `<div style="font-size:10px;color:var(--sage)">✅ พร้อมแลก!</div>`
+            : `<div style="font-size:10px;color:var(--text-muted)">อีก ${m.at - totalStamp} ครั้ง</div>`}
+        </div>
+        ${canRedeem ? `
+          <button onclick="redeemStamp('${t.key}',${m.at})"
+            style="padding:5px 10px;border-radius:10px;background:var(--brand);color:white;border:none;
+                   font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+            แลก →
+          </button>` : ''}
+      </div>`;
+    }).join('');
+
     return `<div style="background:var(--bg-page);border-radius:14px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:12px;font-weight:700;color:var(--text-main)">${t.label}</div>
-        <div style="font-size:11px;color:var(--text-muted)">รอบที่ ${cycle} · สะสม ${totalStamp} ครั้ง</div>
+        <div style="font-size:11px;font-weight:700;color:var(--brand)">${totalStamp} สแตมป์</div>
       </div>
-      ${nextMs ? `<div style="font-size:10px;margin-bottom:6px;color:var(--brand)">
-        🎯 ต่อไป: ครบ ${nextMs.at} ครั้ง → ${_rewardLabel(nextMs)} (อีก ${nextMs.at - effective} ครั้ง)
-      </div>` : `<div style="font-size:10px;margin-bottom:6px;color:var(--sage)">🏆 ครบทุก milestone แล้ว! วนรอบใหม่</div>`}
-      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px">
-        <div style="height:100%;background:var(--brand);border-radius:3px;width:${Math.min(pctSeg,100)}%;transition:width .6s"></div>
+      ${nextMs
+        ? `<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">
+             🎯 อีก <strong style="color:var(--brand)">${nextMs.at - totalStamp} ครั้ง</strong>
+             → ครบ ${nextMs.at} สแตมป์ → ${_rewardLabel(nextMs)}
+           </div>`
+        : `<div style="font-size:10px;color:var(--sage);margin-bottom:6px">🏆 ครบทุก milestone!</div>`}
+      <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;background:${canRedeemAny?'var(--sage)':'var(--brand)'};border-radius:3px;
+          width:${nextMs ? Math.min(Math.round(totalStamp/nextMs.at*100),100) : 100}%;transition:width .6s"></div>
       </div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Milestones</div>
-      ${msHtml}
+      ${msHtml2}
     </div>`;
   }).join('');
 
@@ -1169,6 +1198,31 @@ async function viewMember(uid) {
   await loadMember(uid);
 }
 window.viewMember = viewMember;
+
+// ── Redeem Stamp ─────────────────────────────────────────────
+window.redeemStamp = async function(sourceType, milestoneAt) {
+  const uid = viewUid || liffUserId;
+  if (!uid || uid.startsWith('phone_')) {
+    showToast('รองรับเฉพาะสมาชิก LINE ครับ'); return;
+  }
+  const PAYMENT_API = 'https://my-laundry-scraper-production.up.railway.app';
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const res  = await fetch(`${PAYMENT_API}/payment/redeem-stamp`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: uid, source_type: sourceType, milestone_at: milestoneAt})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    showToast(`✅ แลกแล้ว! สแตมป์เหลือ ${data.remaining_stamps} ดวง`, 3000);
+    // reload member data
+    await loadMember(uid);
+  } catch(e) {
+    showToast(`❌ ${e.message}`, 3500);
+    if (btn) { btn.disabled = false; btn.textContent = 'แลก →'; }
+  }
+};
 
 // ── Admin Actions ─────────────────────────────────────────
 function _showAdminPanel(uid) {

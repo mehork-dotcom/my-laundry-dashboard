@@ -2396,17 +2396,17 @@
     // Default milestones ตามต้นทุนจริง
     const DEFAULT_MILESTONES = {
       washer: [
-        {at:8,  type:'free',   program:'cold',   label:'ซักน้ำเย็นฟรี'},
-        {at:16, type:'free',   program:'warm',   label:'ซักน้ำอุ่นฟรี'},
+        {at:8,  cost:8,  type:'free', reward_machine:'washer', program:'cold',   label:'ซักน้ำเย็นฟรี'},
+        {at:14, cost:14, type:'free', reward_machine:'aqua',   program:'p4',     label:'AQUA P4 ฟรี'},
       ],
       dryer: [
-        {at:6,  type:'free',   program:'single', label:'อบผ้าฟรี'},
-        {at:12, type:'free',   program:'single', label:'อบผ้าฟรี'},
+        {at:6,  cost:6,  type:'free', reward_machine:'dryer',  program:'single', label:'อบผ้าฟรี'},
+        {at:12, cost:12, type:'free', reward_machine:'dryer',  program:'single', label:'อบผ้าฟรี'},
       ],
       aqua: [
-        {at:6,  type:'free',   program:'p4',     label:'AQUA P4 ฟรี'},
-        {at:12, type:'free',   program:'p2',     label:'AQUA P2 ฟรี'},
-        {at:20, type:'free',   program:'p1',     label:'AQUA P1 ฟรี'},
+        {at:6,  cost:6,  type:'free', reward_machine:'aqua',   program:'p4',     label:'AQUA P4 ฟรี'},
+        {at:12, cost:12, type:'free', reward_machine:'aqua',   program:'p2',     label:'AQUA P2 ฟรี'},
+        {at:20, cost:20, type:'free', reward_machine:'aqua',   program:'p1',     label:'AQUA P1 ฟรี'},
       ],
     };
 
@@ -2447,26 +2447,41 @@
         container.innerHTML = ms.map((m, i) => {
             const progOpts = t.programs.map(p =>
                 `<option value="${p}" ${p===m.program?'selected':''}>${t.progNames[p]||p}</option>`).join('');
-            return `<div class="flex items-center gap-1.5 mb-1.5 flex-wrap" data-ms-idx="${i}">
-                <span class="text-[10px] font-bold" style="color:var(--text-muted)">ครบ</span>
-                <input type="number" min="1" max="99" value="${m.at}"
-                    onchange="_updateMs('${key}',${i},'at',this.value)"
-                    class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="${iSty}"/>
-                <span class="text-[10px]" style="color:var(--text-muted)">→</span>
-                <select onchange="_updateMs('${key}',${i},'type',this.value)"
-                    class="text-xs px-1 py-0.5 rounded border" style="${iSty};flex:none">
-                    <option value="free"   ${m.type==='free'  ?'selected':''}>🎟️ ฟรี</option>
-                    <option value="credit" ${m.type==='credit'?'selected':''}>💰 Credit</option>
-                </select>
-                ${m.type==='free'
-                    ? `<select onchange="_updateMs('${key}',${i},'program',this.value)"
-                          class="text-xs px-1 py-0.5 rounded border flex-1" style="${iSty}">${progOpts}</select>`
-                    : `<span class="text-[10px]" style="color:var(--text-muted)">฿</span>
-                       <input type="number" min="1" max="9999" value="${m.value||0}"
-                           onchange="_updateMs('${key}',${i},'value',this.value)"
-                           class="w-14 text-xs px-1 py-0.5 rounded border" style="${iSty}"/>`}
-                <button onclick="_removeMs('${key}',${i})"
-                    class="text-[10px] px-1.5 py-0.5 rounded" style="color:var(--brand);background:transparent;border:none;cursor:pointer">✕</button>
+            const machineOpts = [
+                {v:'washer',l:'🌀 Washer'},{v:'dryer',l:'🔥 Dryer'},{v:'aqua',l:'✨ AQUA'}
+            ].map(o=>`<option value="${o.v}" ${(m.reward_machine||key)===o.v?'selected':''}>${o.l}</option>`).join('');
+            return `<div class="p-2 mb-1.5 rounded-lg" style="background:var(--bg-card);border:1px solid var(--border)">
+                <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                    <span class="text-[10px]" style="color:var(--text-muted)">สะสมครบ</span>
+                    <input type="number" min="1" max="99" value="${m.at}"
+                        onchange="_updateMs('${key}',${i},'at',this.value)"
+                        class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="${iSty}"/>
+                    <span class="text-[10px]" style="color:var(--text-muted)">สแตมป์ →</span>
+                    <select onchange="_updateMs('${key}',${i},'type',this.value)"
+                        class="text-xs px-1 py-0.5 rounded border" style="${iSty}">
+                        <option value="free"   ${m.type==='free'  ?'selected':''}>🎟️ ฟรี</option>
+                        <option value="credit" ${m.type==='credit'?'selected':''}>💰 Credit</option>
+                    </select>
+                    <button onclick="_removeMs('${key}',${i})"
+                        style="margin-left:auto;color:var(--brand);background:none;border:none;cursor:pointer;font-size:14px">✕</button>
+                </div>
+                ${m.type==='free' ? `
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[10px]" style="color:var(--text-muted)">เครื่อง:</span>
+                    <select onchange="_updateMs('${key}',${i},'reward_machine',this.value);_renderMilestoneList('${key}')"
+                        class="text-xs px-1 py-0.5 rounded border" style="${iSty}">${machineOpts}</select>
+                    <span class="text-[10px]" style="color:var(--text-muted)">โปรแกรม:</span>
+                    <select onchange="_updateMs('${key}',${i},'program',this.value)"
+                        class="text-xs px-1 py-0.5 rounded border flex-1" style="${iSty}">
+                        ${_getProgramOpts(m.reward_machine||key, m.program)}
+                    </select>
+                </div>` : `
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[10px]" style="color:var(--text-muted)">Credit ฿</span>
+                    <input type="number" min="1" max="9999" value="${m.value||0}"
+                        onchange="_updateMs('${key}',${i},'value',this.value)"
+                        class="w-16 text-xs px-1 py-0.5 rounded border" style="${iSty}"/>
+                </div>`}
             </div>`;
         }).join('') +
         `<div class="text-[10px] mt-1" style="color:var(--text-muted)">🔄 หลังครบ milestone สุดท้าย วนใหม่จากต้น</div>`;

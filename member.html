@@ -699,11 +699,13 @@ async function loadMember(uid) {
   const isNew  = await checkAndShowRegistration(uid, isLiff && uid === liffUserId);
   if (isNew) return;  // แสดง registration screen แทน
 
-  const [mSnap, txSnap] = await Promise.all([
+  const [mSnap, txSnap, featSnap] = await Promise.all([
     get(ref(db, `laundry_system/members/${uid}`)),
     get(ref(db, 'laundry_system/transactions')),
+    get(ref(db, 'laundry_system/settings/features')),
   ]);
 
+  features   = featSnap.exists() ? featSnap.val() : {};
   memberData = mSnap.exists() ? mSnap.val() : {};
   const txAll = txSnap.exists() ? txSnap.val() : {};
 

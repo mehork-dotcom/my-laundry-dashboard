@@ -467,6 +467,21 @@ html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun'
         📤 แชร์บัตร
       </button>
     </div>
+    <!-- Referral link section -->
+    <div style="margin-top:10px;padding:12px;background:var(--bg-page);border-radius:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-main);margin-bottom:4px">
+        👥 ลิงก์ชวนเพื่อน (Referral)
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">
+        เมื่อเพื่อนสมัครและใช้งานครั้งแรก → ทั้งคู่ได้ +100 แต้ม
+      </div>
+      <button onclick="copyReferralLink()" style="width:100%;padding:10px;border-radius:11px;
+        background:var(--brand);color:white;border:none;font-size:12px;font-weight:700;cursor:pointer">
+        🔗 คัดลอกลิงก์ชวนเพื่อน
+      </button>
+    </div>
+    <div style="display:none"><!-- closing div for old buttons -->
+    </div>
 
     <div id="qr-url" style="display:none"></div>
   </div>
@@ -628,7 +643,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // URL param: admin viewing specific member
   const params = new URLSearchParams(location.search);
-  viewUid = params.get('uid') || null;
+  viewUid    = params.get('uid') || null;
+  const referralBy = params.get('ref') || null;   // UID ของคนที่แชร์ลิงก์
 
   try {
     await liff.init({ liffId: LIFF_ID });
@@ -968,6 +984,7 @@ function renderQR() {
   if (!uid) return;
 
   // QR links to kiosk page with member UID — kiosk reads ?member_uid=xxx
+  // QR แสดงสองอย่าง: kiosk scan และ referral share
   const kioskUrl = `${KIOSK_URL}?member_uid=${encodeURIComponent(uid)}`;
   const box      = document.getElementById('qr-box');
   const urlEl    = document.getElementById('qr-url');
@@ -1006,6 +1023,15 @@ function copyLink() {
     .then(() => showToast('✅ คัดลอกลิงก์แล้ว'))
     .catch(() => showToast('❌ ไม่สามารถคัดลอกได้'));
 }
+
+function copyReferralLink() {
+  const uid = viewUid || liffUserId;
+  const url = `${PAGE_URL}?ref=${uid}`;
+  navigator.clipboard?.writeText(url)
+    .then(() => showToast('✅ คัดลอกลิงก์ Referral แล้ว'))
+    .catch(() => showToast('❌ ไม่สามารถคัดลอกได้'));
+}
+window.copyReferralLink = copyReferralLink;
 
 function shareCard() {
   const uid  = viewUid || liffUserId;
@@ -1266,6 +1292,7 @@ async function registerLine() {
       user_id: uid, name, phone, points: 0,
       total_uses: 0, total_spent: 0, loyalty_stamps: 0,
       credit_balance: 0, joined_at: now, member_type: 'line',
+      ...(referralBy && referralBy !== uid ? { referral_by: referralBy, referral_activated: false } : {}),
     });
     showToast('🎉 สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ');
     document.getElementById('register-screen').style.display = 'none';
@@ -1320,6 +1347,7 @@ async function registerKiosk() {
       user_id: uid, name, phone, points: 0,
       total_uses: 0, total_spent: 0, loyalty_stamps: 0,
       credit_balance: 0, joined_at: now, member_type: 'kiosk',
+      ...(referralBy && referralBy !== uid ? { referral_by: referralBy, referral_activated: false } : {}),
     });
     showToast('🎉 สมัครสมาชิกสำเร็จ!');
     document.getElementById('register-screen').style.display = 'none';

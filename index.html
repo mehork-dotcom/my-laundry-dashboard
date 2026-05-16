@@ -1220,7 +1220,7 @@
     // ══════════════════════════════════════════════════════════
     let _allMembers = {};
 
-    async function loadMemberList() {
+    window.loadMemberList = async function loadMemberList() {
       const snap = await get(ref(database,'laundry_system/members'));
       _allMembers = snap.exists() ? snap.val() : {};
       renderMemberList(_allMembers);

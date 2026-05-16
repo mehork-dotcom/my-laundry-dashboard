@@ -593,7 +593,7 @@ const PROG_NAMES = {
 };
 
 let db, liffUserId, viewUid, isAdmin = false;
-let memberData = {}, settings = {}, allTx = [], curHistTab = 'wash';
+let memberData = {}, settings = {}, features = {}, allTx = [], curHistTab = 'wash';
 
 // ── Theme ────────────────────────────────────────────────
 function toggleTheme() {
@@ -812,7 +812,13 @@ function renderStamps() {
   };
 
   let totalStamps = 0;
-  wrap.innerHTML = LOYALTY_TYPE_DEFS.map(t => {
+  // กรองเฉพาะ type ที่ feature flag เปิดอยู่ (default ON)
+  const activeTypes = LOYALTY_TYPE_DEFS.filter(t => features[`loyalty_${t.key}`] !== false);
+  if (!activeTypes.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">ระบบสะสมสแตมป์ปิดอยู่ชั่วคราว</div>';
+    return;
+  }
+  wrap.innerHTML = activeTypes.map(t => {
     const cfg     = settings[`loyalty_${t.key}`] || {};
     const every   = parseInt(cfg.every || settings.loyalty_every || 10);
     const stamps  = parseInt(memberData[`loyalty_${t.key}`] || 0);

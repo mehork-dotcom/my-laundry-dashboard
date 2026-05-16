@@ -1811,6 +1811,14 @@
         let _validVouchers = [];
         if (liffUserId) {
             try {
+                // ตรวจ feature flag vouchers ก่อน
+                const ffSnap = await get(ref(database,'laundry_system/settings/features/vouchers'));
+                const voucherEnabled = !ffSnap.exists() || ffSnap.val() !== false;
+                if (!voucherEnabled) {
+                    // ซ่อน voucher button ทันที
+                    const vBtn = document.getElementById('pay-method-voucher');
+                    if (vBtn) vBtn.classList.add('hidden');
+                } else {
                 const mType4v = _mid.startsWith('W') ? 'washer'
                               : _mid.startsWith('D') ? 'dryer' : 'aqua';
                 const vSnap = await get(ref(database,
@@ -1824,6 +1832,7 @@
                         _validVouchers.push({ id, ...v });
                     });
                 }
+                } // end voucherEnabled
             } catch(e) {}
         }
 

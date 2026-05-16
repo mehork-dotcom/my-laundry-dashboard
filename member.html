@@ -468,7 +468,7 @@ html,body{background:var(--bg-page);color:var(--text-main);font-family:'Sarabun'
       </button>
     </div>
     <!-- Referral link section -->
-    <div style="margin-top:10px;padding:12px;background:var(--bg-page);border-radius:12px">
+    <div id="referral-section" style="margin-top:10px;padding:12px;background:var(--bg-page);border-radius:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text-main);margin-bottom:4px">
         👥 ลิงก์ชวนเพื่อน (Referral)
       </div>
@@ -723,6 +723,22 @@ async function loadMember(uid) {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('main').style.display = '';
   _showAdminPanel(uid);
+
+  // ── Apply feature flags to UI ─────────────────────────
+  // Voucher tab
+  const voucherTab = document.getElementById('htab-voucher');
+  if (voucherTab) voucherTab.style.display = features.vouchers === false ? 'none' : '';
+
+  // Referral section in share tab
+  const refSection = document.getElementById('referral-section');
+  if (refSection) refSection.style.display = features.referral === false ? 'none' : '';
+
+  // Stamp header counter (ซ่อนถ้า stamp ทุกประเภทปิด)
+  const stampWrap = document.getElementById('loyalty-cards-wrap');
+  const allStampsOff = ['washer','dryer','aqua'].every(k => features[`loyalty_${k}`] === false);
+  const stampSection = stampWrap?.closest('.section-pad') || stampWrap?.parentElement?.parentElement;
+  if (stampSection && allStampsOff) stampSection.style.display = 'none';
+  else if (stampSection) stampSection.style.display = '';
 }
 
 // ── Profile ───────────────────────────────────────────────

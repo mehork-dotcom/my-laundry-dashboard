@@ -2392,63 +2392,119 @@
         progNames:{p1:'P1-ซักอบ พิเศษ',p2:'P2-ซักอบ มาตรฐาน',p3:'P3-ซักน้ำอุ่น',p4:'P4-ซักน้ำเย็น'} },
     ];
 
+    // ══ Milestone Stamp System ═════════════════════════════════
+    // Default milestones ตามต้นทุนจริง
+    const DEFAULT_MILESTONES = {
+      washer: [
+        {at:8,  type:'free',   program:'cold',   label:'ซักน้ำเย็นฟรี'},
+        {at:16, type:'free',   program:'warm',   label:'ซักน้ำอุ่นฟรี'},
+      ],
+      dryer: [
+        {at:6,  type:'free',   program:'single', label:'อบผ้าฟรี'},
+        {at:12, type:'free',   program:'single', label:'อบผ้าฟรี'},
+      ],
+      aqua: [
+        {at:6,  type:'free',   program:'p4',     label:'AQUA P4 ฟรี'},
+        {at:12, type:'free',   program:'p2',     label:'AQUA P2 ฟรี'},
+        {at:20, type:'free',   program:'p1',     label:'AQUA P1 ฟรี'},
+      ],
+    };
+
+    let _milestones = JSON.parse(JSON.stringify(DEFAULT_MILESTONES));
+
     function _renderLoyaltyCfg(settings) {
         const container = document.getElementById('loyalty-cfg');
         if (!container) return;
-        container.innerHTML = LOYALTY_TYPES.map(t => {
-            const cfg   = settings[`loyalty_${t.key}`] || {};
-            const every = cfg.every ?? 10;
-            const type  = cfg.type  || 'credit';
-            const value = cfg.value || 0;
-            const prog  = cfg.program || t.programs[0];
-            const iCls  = 'w-12 text-xs px-1 py-0.5 rounded border text-center';
-            const iSty  = 'border-color:var(--border);background:var(--bg-page);color:var(--text-main)';
-            const progOpts = t.programs.map(p =>
-                `<option value="${p}" ${p===prog?'selected':''}>${t.progNames[p]||p}</option>`).join('');
-            return `<div class="p-3 rounded-xl" style="background:var(--bg-page)">
-                <div class="text-xs font-bold mb-2" style="color:var(--text-main)">${t.label}</div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[10px]" style="color:var(--text-muted)">ทุก</span>
-                    <input type="number" id="ly-every-${t.key}" min="1" max="50" value="${every}"
-                        class="${iCls}" style="${iSty}"/>
-                    <span class="text-[10px]" style="color:var(--text-muted)">ครั้ง ได้รับ</span>
-                    <select id="ly-type-${t.key}" onchange="_toggleLoyaltyType('${t.key}')"
-                        class="text-xs px-1 py-0.5 rounded border" style="${iSty};border-color:var(--border)">
-                        <option value="credit" ${type==='credit'?'selected':''}>💰 Credit ฿</option>
-                        <option value="free"   ${type==='free'?'selected':''}>🎟️ ฟรีโปรแกรม</option>
-                    </select>
+        // โหลด milestones จาก settings
+        LOYALTY_TYPES.forEach(t => {
+            const cfg = settings[`loyalty_${t.key}`] || {};
+            if (cfg.milestones) _milestones[t.key] = cfg.milestones;
+        });
+        container.innerHTML = LOYALTY_TYPES.map(t => `
+            <div class="p-3 rounded-xl mb-2" style="background:var(--bg-page)">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-xs font-bold" style="color:var(--text-main)">${t.label}</div>
+                    <button onclick="_addMilestone('${t.key}')"
+                        class="text-[10px] px-2 py-0.5 rounded font-bold"
+                        style="background:var(--brand);color:white">+ เพิ่ม</button>
                 </div>
-                <div id="ly-credit-row-${t.key}" class="flex items-center gap-2 mt-2" style="display:${type==='credit'?'flex':'none'}!important">
-                    <span class="text-[10px]" style="color:var(--text-muted)">฿</span>
-                    <input type="number" id="ly-value-${t.key}" min="0" max="9999" value="${value}"
-                        class="${iCls}" style="${iSty}"/>
-                </div>
-                <div id="ly-free-row-${t.key}" class="flex items-center gap-2 mt-2" style="display:${type==='free'?'flex':'none'}!important">
-                    <span class="text-[10px]" style="color:var(--text-muted)">โปรแกรม:</span>
-                    <select id="ly-prog-${t.key}" class="text-xs px-1 py-0.5 rounded border flex-1" style="${iSty};border-color:var(--border)">
-                        ${progOpts}
-                    </select>
-                </div>
-            </div>`;
-        }).join('');
+                <div id="ms-list-${t.key}"></div>
+            </div>`).join('');
+        LOYALTY_TYPES.forEach(t => _renderMilestoneList(t.key));
     }
 
-    window._toggleLoyaltyType = function(key) {
-        const type = document.getElementById(`ly-type-${key}`)?.value;
-        document.getElementById(`ly-credit-row-${key}`).style.display = type==='credit' ? 'flex' : 'none';
-        document.getElementById(`ly-free-row-${key}`).style.display   = type==='free'   ? 'flex' : 'none';
+    function _renderMilestoneList(key) {
+        const container = document.getElementById(`ms-list-${key}`);
+        if (!container) return;
+        const t = LOYALTY_TYPES.find(x => x.key === key);
+        const ms = _milestones[key] || [];
+        const iSty = 'border-color:var(--border);background:var(--bg-card);color:var(--text-main)';
+
+        if (!ms.length) {
+            container.innerHTML = `<div class="text-[10px] text-center py-2" style="color:var(--text-muted)">ยังไม่มี milestone — กด + เพิ่ม</div>`;
+            return;
+        }
+        container.innerHTML = ms.map((m, i) => {
+            const progOpts = t.programs.map(p =>
+                `<option value="${p}" ${p===m.program?'selected':''}>${t.progNames[p]||p}</option>`).join('');
+            return `<div class="flex items-center gap-1.5 mb-1.5 flex-wrap" data-ms-idx="${i}">
+                <span class="text-[10px] font-bold" style="color:var(--text-muted)">ครบ</span>
+                <input type="number" min="1" max="99" value="${m.at}"
+                    onchange="_updateMs('${key}',${i},'at',this.value)"
+                    class="w-10 text-xs px-1 py-0.5 rounded border text-center" style="${iSty}"/>
+                <span class="text-[10px]" style="color:var(--text-muted)">→</span>
+                <select onchange="_updateMs('${key}',${i},'type',this.value)"
+                    class="text-xs px-1 py-0.5 rounded border" style="${iSty};flex:none">
+                    <option value="free"   ${m.type==='free'  ?'selected':''}>🎟️ ฟรี</option>
+                    <option value="credit" ${m.type==='credit'?'selected':''}>💰 Credit</option>
+                </select>
+                ${m.type==='free'
+                    ? `<select onchange="_updateMs('${key}',${i},'program',this.value)"
+                          class="text-xs px-1 py-0.5 rounded border flex-1" style="${iSty}">${progOpts}</select>`
+                    : `<span class="text-[10px]" style="color:var(--text-muted)">฿</span>
+                       <input type="number" min="1" max="9999" value="${m.value||0}"
+                           onchange="_updateMs('${key}',${i},'value',this.value)"
+                           class="w-14 text-xs px-1 py-0.5 rounded border" style="${iSty}"/>`}
+                <button onclick="_removeMs('${key}',${i})"
+                    class="text-[10px] px-1.5 py-0.5 rounded" style="color:var(--brand);background:transparent;border:none;cursor:pointer">✕</button>
+            </div>`;
+        }).join('') +
+        `<div class="text-[10px] mt-1" style="color:var(--text-muted)">🔄 หลังครบ milestone สุดท้าย วนใหม่จากต้น</div>`;
+    }
+
+    window._updateMs = function(key, idx, field, val) {
+        if (!_milestones[key]) return;
+        const m = _milestones[key][idx];
+        if (field === 'at')      m.at      = parseInt(val);
+        else if (field === 'value') m.value = parseFloat(val);
+        else if (field === 'type') {
+            m.type = val;
+            _renderMilestoneList(key); // re-render เพื่อสลับ dropdown
+        }
+        else m[field] = val;
+    };
+
+    window._addMilestone = function(key) {
+        const t  = LOYALTY_TYPES.find(x => x.key === key);
+        const ms = _milestones[key] || [];
+        const lastAt = ms.length ? ms[ms.length-1].at : 0;
+        const gap = key === 'aqua' ? 6 : key === 'dryer' ? 6 : 8;
+        ms.push({at: lastAt + gap, type:'free', program: t.programs[t.programs.length-1], label:''});
+        _milestones[key] = ms;
+        _renderMilestoneList(key);
+    };
+
+    window._removeMs = function(key, idx) {
+        _milestones[key].splice(idx, 1);
+        _renderMilestoneList(key);
     };
 
     function _getLoyaltyCfg() {
         const result = {};
         LOYALTY_TYPES.forEach(t => {
-            const type = document.getElementById(`ly-type-${t.key}`)?.value || 'credit';
-            result[`loyalty_${t.key}`] = {
-                every:   parseInt(document.getElementById(`ly-every-${t.key}`)?.value) || 10,
-                type,
-                value:   parseFloat(document.getElementById(`ly-value-${t.key}`)?.value) || 0,
-                program: document.getElementById(`ly-prog-${t.key}`)?.value || t.programs[0],
-            };
+            // sort milestones by at
+            const sorted = (_milestones[t.key]||[]).sort((a,b)=>a.at-b.at);
+            result[`loyalty_${t.key}`] = { milestones: sorted };
         });
         return result;
     }

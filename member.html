@@ -817,52 +817,89 @@ const LOYALTY_TYPE_DEFS = [
   { key:'aqua',   label:'✨ AQUA',                 icon:'✨' },
 ];
 
+const PROG_NAMES_TH = {cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน',single:'อบผ้า',
+  p1:'P1-ซักอบ พิเศษ',p2:'P2-ซักอบ มาตรฐาน',p3:'P3-ซักน้ำอุ่น',p4:'P4-ซักน้ำเย็น'};
+
+const DEFAULT_MILESTONES_MB = {
+  washer: [{at:8,type:'free',program:'cold'},{at:16,type:'free',program:'warm'}],
+  dryer:  [{at:6,type:'free',program:'single'},{at:12,type:'free',program:'single'}],
+  aqua:   [{at:6,type:'free',program:'p4'},{at:12,type:'free',program:'p2'},{at:20,type:'free',program:'p1'}],
+};
+
+function _rewardLabel(m) {
+  if (!m) return '—';
+  if (m.type === 'credit') return `Credit ฿${m.value||0}`;
+  return `ฟรี ${PROG_NAMES_TH[m.program] || m.program || '—'}`;
+}
+
 function renderStamps() {
   const wrap = document.getElementById('loyalty-cards-wrap');
   if (!wrap) return;
 
-  const rewardTypeTh = (cfg) => {
-    if (!cfg) return '';
-    if (cfg.type === 'credit') return `Credit ฿${cfg.value}`;
-    const pnames = {cold:'น้ำเย็น',warm:'น้ำอุ่น',hot:'น้ำร้อน',single:'อบผ้า',
-      p1:'P1',p2:'P2',p3:'P3',p4:'P4'};
-    return `ฟรีโปรแกรม ${pnames[cfg.program]||cfg.program}`;
-  };
-
-  let totalStamps = 0;
-  // กรองเฉพาะ type ที่ feature flag เปิดอยู่ (default ON)
   const activeTypes = LOYALTY_TYPE_DEFS.filter(t => features[`loyalty_${t.key}`] !== false);
   if (!activeTypes.length) {
     wrap.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">ระบบสะสมสแตมป์ปิดอยู่ชั่วคราว</div>';
     return;
   }
+
+  let totalStamps = 0;
   wrap.innerHTML = activeTypes.map(t => {
-    const cfg     = settings[`loyalty_${t.key}`] || {};
-    const every   = parseInt(cfg.every || settings.loyalty_every || 10);
-    const stamps  = parseInt(memberData[`loyalty_${t.key}`] || 0);
-    const current = stamps % every;
-    totalStamps  += stamps;
-    const reward  = rewardTypeTh(cfg) || '-';
-    const pct     = Math.round(current / every * 100);
+    const cfg        = settings[`loyalty_${t.key}`] || {};
+    const milestones = (cfg.milestones || DEFAULT_MILESTONES_MB[t.key] || []).sort((a,b)=>a.at-b.at);
+    const totalStamp = parseInt(memberData[`loyalty_${t.key}`] || 0);
+    totalStamps     += totalStamp;
 
-    const stampsHtml = Array.from({ length: Math.min(every, 10) }, (_, i) => {
-      const filled  = i < current;
-      const isLast  = i === Math.min(every, 10) - 1;
-      return `<div class="stamp ${filled?'filled':''} ${isLast?'reward':''}" style="width:28px;height:28px;font-size:11px">
-        ${isLast ? '🎁' : filled ? '✓' : (i+1)}
+    if (!milestones.length) return '';
+
+    const period    = milestones[milestones.length-1].at;
+    const effective = totalStamp % period || (totalStamp > 0 ? period : 0);
+    const nextMs    = milestones.find(m => m.at > effective);
+    const prevMs    = [...milestones].reverse().find(m => m.at <= effective);
+    const cycle     = Math.floor(totalStamp / period) + 1;
+
+    // milestone list
+    const msHtml = milestones.map(m => {
+      const claimed  = effective >= m.at || totalStamp >= m.at;
+      const isNext   = !nextMs ? false : m.at === nextMs.at;
+      const remaining = m.at - effective;
+      const bg = claimed ? 'var(--sage)' : isNext ? 'var(--brand)' : 'var(--border)';
+      const color = (claimed || isNext) ? 'white' : 'var(--text-muted)';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="width:26px;height:26px;border-radius:50%;background:${bg};color:${color};
+          font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          ${claimed ? '✓' : isNext ? '→' : m.at}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700;color:var(--text-main)">ครบ ${m.at} ครั้ง → ${_rewardLabel(m)}</div>
+          ${claimed ? `<div style="font-size:10px;color:var(--sage)">✅ ได้รับแล้ว</div>`
+                    : isNext ? `<div style="font-size:10px;color:var(--brand)">อีก ${remaining} ครั้ง</div>`
+                    : `<div style="font-size:10px;color:var(--text-muted)">ล็อก</div>`}
+        </div>
       </div>`;
-    }).join('') + (every > 10 ? `<div style="font-size:10px;color:var(--text-muted);display:flex;align-items:center">+${every-10}</div>` : '');
+    }).join('');
 
-    return `<div style="background:var(--bg-page);border-radius:14px;padding:12px">
+    // progress bar toward next milestone
+    const pctTo = nextMs
+      ? Math.round((effective / nextMs.at) * 100)
+      : 100;
+    const fromAt = prevMs?.at || 0;
+    const pctSeg = nextMs
+      ? Math.round(((effective - fromAt) / (nextMs.at - fromAt)) * 100)
+      : 100;
+
+    return `<div style="background:var(--bg-page);border-radius:14px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:12px;font-weight:700;color:var(--text-main)">${t.label}</div>
-        <div style="font-size:11px;font-weight:700;color:var(--brand)">${current}/${every}</div>
+        <div style="font-size:11px;color:var(--text-muted)">รอบที่ ${cycle} · สะสม ${totalStamp} ครั้ง</div>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${stampsHtml}</div>
-      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px">
-        <div style="height:100%;background:var(--brand);border-radius:2px;width:${pct}%;transition:width .5s"></div>
+      ${nextMs ? `<div style="font-size:10px;margin-bottom:6px;color:var(--brand)">
+        🎯 ต่อไป: ครบ ${nextMs.at} ครั้ง → ${_rewardLabel(nextMs)} (อีก ${nextMs.at - effective} ครั้ง)
+      </div>` : `<div style="font-size:10px;margin-bottom:6px;color:var(--sage)">🏆 ครบทุก milestone แล้ว! วนรอบใหม่</div>`}
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px">
+        <div style="height:100%;background:var(--brand);border-radius:3px;width:${Math.min(pctSeg,100)}%;transition:width .6s"></div>
       </div>
-      <div style="font-size:10px;color:var(--text-muted)">รางวัล: ${reward} · สะสมแล้วทั้งหมด ${stamps} ครั้ง</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Milestones</div>
+      ${msHtml}
     </div>`;
   }).join('');
 

@@ -1087,9 +1087,152 @@
         }
     }
 
-    // ============================================================
+    // ══════════════════════════════════════════════════════════
+    // Feature Flags
+    // ══════════════════════════════════════════════════════════
+    const FEATURE_DEFS = [
+      { key:'referral',            label:'👥 Referral Program',          desc:'ส่ง LINE เมื่อเพื่อนใช้ครั้งแรก', group:null },
+      { key:'welcome_bonus',       label:'🎁 Welcome Bonus (+150 แต้ม)', desc:'ให้แต้มสมาชิกใหม่ทันที', group:null },
+      { key:'vouchers',            label:'🎫 Voucher (ใช้สิทธิ์ฟรี)',    desc:'แสดงปุ่มสิทธิ์ฟรีในหน้าชำระ', group:null },
+      { key:'winback',             label:'💌 Win-back Campaign',          desc:'ส่ง LINE + credit เมื่อไม่มาใช้', group:null },
+      { key:'tier_notifications',  label:'⭐ Tier Upgrade Notify',        desc:'แจ้ง LINE เมื่ออัปเกรด Silver/Gold', group:null },
+      { key:'loyalty_washer',      label:'🌀 Stamp — เครื่องซัก (IPSO)', desc:'สะสมสแตมป์จาก Washer W1–W4', group:'stamp' },
+      { key:'loyalty_dryer',       label:'🔥 Stamp — เครื่องอบ (Dryer)', desc:'สะสมสแตมป์จาก Dryer D5–D8', group:'stamp' },
+      { key:'loyalty_aqua',        label:'✨ Stamp — เครื่อง AQUA',      desc:'สะสมสแตมป์จาก AQUA 9 และ 10', group:'stamp' },
+    ];
+
+    function _renderFeatureList(flags) {
+      // แบ่งกลุ่ม: general + stamp group
+      const general = FEATURE_DEFS.filter(f => !f.group);
+      const stamps  = FEATURE_DEFS.filter(f => f.group === 'stamp');
+      const row = f => {
+        const on = flags[f.key] !== false;
+        return `<label class="flex items-center justify-between gap-2 cursor-pointer py-1">
+          <div class="flex-1">
+            <div class="text-xs font-semibold" style="color:var(--text-main)">${f.label}</div>
+            <div class="text-[10px]" style="color:var(--text-muted)">${f.desc}</div>
+          </div>
+          <input type="checkbox" ${on?'checked':''} data-feature="${f.key}"
+            onchange="saveFeatureFlag('${f.key}',this.checked)"
+            class="w-4 h-4" style="accent-color:var(--sage)"/>
+        </label>`;
+      };
+      return general.map(row).join('') +
+        `<div class="pt-1 mt-1 border-t text-[10px] font-bold" style="border-color:var(--border);color:var(--text-muted)">
+           🎟️ Loyalty Stamps — เปิด/ปิดแยกตามประเภทเครื่อง
+         </div>` +
+        stamps.map(row).join('');
+    }
+
+    async function loadFeatureFlags() {
+      const snap = await get(ref(database,'laundry_system/settings/features'));
+      const flags = snap.exists() ? snap.val() : {};
+      const list  = document.getElementById('feature-flags-list');
+      if (!list) return;
+      list.innerHTML = _renderFeatureList(flags);
+      // load winback_days + retention_days
+      const wbSnap = await get(ref(database,'laundry_system/settings/winback_days'));
+      if (wbSnap.exists()) document.getElementById('winback-days-input').value = wbSnap.val();
+      const rtSnap = await get(ref(database,'laundry_system/settings/history_retention_days'));
+      if (rtSnap.exists()) document.getElementById('retention-days-input').value = rtSnap.val();
+    }
+
+    window.saveFeatureFlag = async function(key, val) {
+      await set(ref(database,`laundry_system/settings/features/${key}`), val);
+      showToast(`${val ? '✅ เปิด' : '🔒 ปิด'} ${key} แล้ว`, val?'✅':'🔒', 2000);
+    };
+    window.saveWinbackDays = async function() {
+      const v = parseInt(document.getElementById('winback-days-input').value);
+      if (v >= 7 && v <= 90) {
+        await set(ref(database,'laundry_system/settings/winback_days'), v);
+        showToast(`✅ ตั้งค่า Win-back ${v} วัน`,'✅',2000);
+      }
+    };
+    window.saveRetentionDays = async function() {
+      const v = parseInt(document.getElementById('retention-days-input').value);
+      if (v >= 30 && v <= 365) {
+        await set(ref(database,'laundry_system/settings/history_retention_days'), v);
+        showToast(`✅ เก็บประวัติ ${v} วัน`,'✅',2000);
+      }
+    };
+
+    // ══════════════════════════════════════════════════════════
+    // Member Management — ใน Admin Panel
+    // ══════════════════════════════════════════════════════════
+    let _allMembers = {};
+
+    async function loadMemberList() {
+      const snap = await get(ref(database,'laundry_system/members'));
+      _allMembers = snap.exists() ? snap.val() : {};
+      renderMemberList(_allMembers);
+    }
+
+    function renderMemberList(members, searchQ = '') {
+      const container = document.getElementById('admin-member-list-body');
+      if (!container) return;
+
+      let entries = Object.entries(members)
+        .filter(([uid, m]) => typeof m === 'object' && m !== null)
+        .map(([uid, m]) => ({uid, ...m}));
+
+      // ค้นหา
+      if (searchQ.trim()) {
+        const q = searchQ.toLowerCase().replace(/\D/g,'') || searchQ.toLowerCase();
+        entries = entries.filter(m =>
+          (m.name||'').toLowerCase().includes(searchQ.toLowerCase()) ||
+          (m.phone||'').replace(/\D/g,'').includes(q) ||
+          m.uid.toLowerCase().includes(q));
+      }
+
+      // Sort by last_use (newest first)
+      const sortBy = document.getElementById('member-sort-select')?.value || 'last';
+      entries.sort((a,b) => {
+        if (sortBy === 'points') return (b.points||0)-(a.points||0);
+        if (sortBy === 'uses')   return (b.total_uses||0)-(a.total_uses||0);
+        return (b.last_use_at||'').localeCompare(a.last_use_at||'');
+      });
+
+      // Count badge
+      const countEl = document.getElementById('member-total-count');
+      if (countEl) countEl.textContent = `${entries.length} คน`;
+
+      if (!entries.length) {
+        container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px">ไม่พบสมาชิก</div>`;
+        return;
+      }
+
+      container.innerHTML = entries.slice(0, 50).map(m => {
+        const typeIcon = m.member_type === 'line' ? '💬' : m.uid.startsWith('phone_') ? '📱' : '👤';
+        const lvl = (m.total_uses||0) >= 51 ? '💎' : (m.total_uses||0) >= 21 ? '⭐' : '🌀';
+        const lastDate = m.last_use_at ? new Date(m.last_use_at).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : '—';
+        const phone = m.phone || m.uid.replace('phone_','') || '';
+        return `<div onclick="window.open('member.html?uid=${m.uid}','_blank')"
+          class="flex items-center gap-2 px-3 py-2 cursor-pointer active:opacity-70 transition"
+          style="border-bottom:1px solid var(--border)">
+          <div style="font-size:16px">${typeIcon}</div>
+          <div style="flex:1;min-width:0">
+            <div class="text-xs font-bold truncate" style="color:var(--text-main)">${lvl} ${m.name||m.uid.slice(0,10)+'…'}</div>
+            <div class="text-[10px]" style="color:var(--text-muted)">${phone ? '📱'+phone+' · ' : ''}ใช้ ${m.total_uses||0}ครั้ง · ${lastDate}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="text-xs font-black" style="color:var(--brand)">${(m.points||0).toLocaleString()}</div>
+            <div class="text-[9px]" style="color:var(--text-muted)">แต้ม</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      if (entries.length > 50) {
+        container.innerHTML += `<div style="padding:10px;text-align:center;font-size:11px;color:var(--text-muted)">
+          แสดง 50 จาก ${entries.length} คน — ค้นหาเพื่อ filter</div>`;
+      }
+    }
+
+    window.onMemberSearch = function(q) { renderMemberList(_allMembers, q); };
+    window.onMemberSort   = function() { renderMemberList(_allMembers, document.getElementById('member-search-input')?.value||''); };
+
+    // ════════════════════════════════════════════════════════════
     // Admin Users Management — โหลด / เพิ่ม (พร้อมชื่อ) / ลบ
-    // ============================================================
+    // ════════════════════════════════════════════════════════════
     const MAX_ADMINS = 5;
 
     async function loadAdminUsers() {
@@ -1602,13 +1745,42 @@
     };
 
     // ── STEP: METHOD SELECTION ───────────────────────────────────
-    function _renderMethods() {
+    async function _renderMethods() {
         const price  = (_customPrice !== null ? _customPrice : parseFloat(_payPricing[_prog] || 0));
-        // ตรวจ beam_payment_disabled จาก Firebase
+
+        // ── ตรวจ voucher ที่ใช้ได้สำหรับ machine + program นี้ ──────
+        let _validVouchers = [];
+        if (liffUserId) {
+            try {
+                const mType4v = _mid.startsWith('W') ? 'washer'
+                              : _mid.startsWith('D') ? 'dryer' : 'aqua';
+                const vSnap = await get(ref(database,
+                    `laundry_system/members/${liffUserId}/loyalty_vouchers`));
+                if (vSnap.exists()) {
+                    const now = new Date();
+                    Object.entries(vSnap.val()).forEach(([id, v]) => {
+                        if (!v || v.used) return;
+                        if (v.type !== mType4v || v.program !== _prog) return;
+                        if (v.expires_at && new Date(v.expires_at) < now) return;
+                        _validVouchers.push({ id, ...v });
+                    });
+                }
+            } catch(e) {}
+        }
+
+        // ── ตรวจ beam_payment_disabled ──────────────────────────────
         get(ref(database,'laundry_system/settings/beam_payment_disabled')).then(s => {
             const beamBtn = document.getElementById('pay-beam-btn');
             if (beamBtn) beamBtn.classList.toggle('hidden', s.exists() && s.val() === true);
         }).catch(()=>{});
+
+        // ── แสดง voucher button ถ้ามีสิทธิ์ ────────────────────────
+        const voucherEl = document.getElementById('pay-method-voucher');
+        if (voucherEl) {
+            voucherEl.classList.toggle('hidden', _validVouchers.length === 0);
+            const vCount = document.getElementById('pay-voucher-count');
+            if (vCount) vCount.textContent = `เหลือ ${_validVouchers.length} สิทธิ์`;
+        }
         const credit = parseFloat(_payMember.credit_balance || 0);
         const points = parseInt(_payMember.points || 0);
         const uc     = document.getElementById('pay-use-credit').checked;
